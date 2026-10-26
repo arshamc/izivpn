@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "607597774886",
+    "project_id": "german-vpn-8bf1d",
+    "storage_bucket": "german-vpn-8bf1d.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:607597774886:android:300454c48f65ee8b65bee7",
+        "android_client_info": {
+          "package_name": "com.arshadevelop.izivpn"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyBK-DBAsfERD0P70LCSwHt5zwD-TRMyzhg"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
