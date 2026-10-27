@@ -1,6 +1,10 @@
+import 'dart:convert';
 import 'package:flutter_v2ray/flutter_v2ray.dart';
+import 'package:fluttertoast/fluttertoast.dart';
 import 'package:get/get.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:shared_preferences/shared_preferences.dart';
+import '../utils/default_servers.dart';
 
 class ServerController extends GetxController {
   RxList<dynamic> serverData = <dynamic>[].obs;
@@ -25,24 +29,73 @@ class ServerController extends GetxController {
     }
   }
 
-  Future<void> fetchServers() async {
-    isLoading = true;
+  // Load from local cache first, or fallback to default servers immediately
+  Future<void> loadCachedOrFallbackServers() async {
     try {
-      QuerySnapshot<Map<String, dynamic>> querySnapshot =
-          await FirebaseFirestore.instance.collection('servers').get();
+      SharedPreferences prefs = await SharedPreferences.getInstance();
+      String? cachedJson = prefs.getString('cached_servers');
+      if (cachedJson != null && cachedJson.isNotEmpty) {
+        List<dynamic> list = jsonDecode(cachedJson);
+        if (list.isNotEmpty) {
+          serverData.assignAll(list);
+          filteredServerData.assignAll(serverData);
+          update();
+          return;
+        }
+      }
+    } catch (e) {
+      print('Error reading cached servers: $e');
+    }
 
-      serverData.assignAll(querySnapshot.docs.map((doc) {
-        var data = doc.data();
-        data['id'] = doc.id;
-        return data;
-      }));
+    // Fallback: bundled default servers (works even with 100% blocked internet)
+    serverData.assignAll(defaultServers);
+    filteredServerData.assignAll(serverData);
+    update();
+  }
 
-      filteredServerData.assignAll(serverData);
-      isLoading = false;
-      update();
+  // Fetch servers from Firestore with timeout protection (never crashes)
+  Future<void> fetchServers({bool showToastOnResult = false}) async {
+    isLoading = true;
+    update();
+
+    try {
+      // 6-second timeout so it never hangs if Firestore is filtered/blocked
+      QuerySnapshot<Map<String, dynamic>> querySnapshot = await FirebaseFirestore
+          .instance
+          .collection('servers')
+          .get()
+          .timeout(const Duration(seconds: 6));
+
+      if (querySnapshot.docs.isNotEmpty) {
+        List<dynamic> freshList = querySnapshot.docs.map((doc) {
+          var data = doc.data();
+          data['id'] = doc.id;
+          return data;
+        }).toList();
+
+        serverData.assignAll(freshList);
+        filteredServerData.assignAll(serverData);
+
+        // Cache locally for offline/filtered resilience
+        SharedPreferences prefs = await SharedPreferences.getInstance();
+        await prefs.setString('cached_servers', jsonEncode(freshList));
+
+        if (showToastOnResult) {
+          Fluttertoast.showToast(msg: "Server list updated (${freshList.length} servers)");
+        }
+      }
     } catch (error) {
+      print('Firestore fetch error (likely filtered or network timeout): $error');
+      if (showToastOnResult) {
+        Fluttertoast.showToast(msg: "Could not reach server, using offline list");
+      }
+    } finally {
+      // Ensure we always have servers populated
+      if (serverData.isEmpty) {
+        serverData.assignAll(defaultServers);
+        filteredServerData.assignAll(serverData);
+      }
       isLoading = false;
-      print('Error fetching servers: $error');
       update();
     }
   }
@@ -87,7 +140,7 @@ class ServerController extends GetxController {
     }
   }
 
-  // Get the server with the lowest positive delay
+  // Get the server with lowest positive delay
   Map<String, dynamic>? getBestServer() {
     Map<String, dynamic>? best;
     int lowestDelay = 999999;
@@ -119,6 +172,9 @@ class ServerController extends GetxController {
 
   @override
   void onInit() {
+    // 1. Immediately load cache or default servers without blocking UI
+    loadCachedOrFallbackServers();
+    // 2. In background, try to fetch fresh list from Firestore (6s timeout)
     fetchServers();
     super.onInit();
   }

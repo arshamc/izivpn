@@ -274,6 +274,27 @@ class _LocationScreenState extends State<LocationScreen> {
               ),
             ),
             actions: [
+              // Manual Refresh Button
+              IconButton(
+                tooltip: "Update Server List",
+                onPressed: serverController.isLoading
+                    ? null
+                    : () {
+                        serverController.fetchServers(showToastOnResult: true);
+                      },
+                icon: serverController.isLoading
+                    ? SizedBox(
+                        width: 18.h,
+                        height: 18.h,
+                        child: const CircularProgressIndicator(
+                          strokeWidth: 2,
+                          color: Colors.orange,
+                        ),
+                      )
+                    : const Icon(Icons.refresh_rounded, color: Colors.white),
+              ),
+
+              // Ping All Button
               IconButton(
                 tooltip: "Ping All Servers",
                 onPressed: serverController.isPinging.value
@@ -434,38 +455,43 @@ class _LocationScreenState extends State<LocationScreen> {
 
                   SizedBox(height: 8.h),
 
-                  // Server List
+                  // Server List with Pull-to-Refresh
                   Expanded(
-                    child: serverController.isLoading
-                        ? const Center(
-                            child: CircularProgressIndicator(color: Colors.orange),
-                          )
-                        : (searchSubmit
+                    child: (searchSubmit
                                 ? serverController.filteredServerData
                                 : serverController.serverData)
                             .isEmpty
-                            ? Center(
-                                child: Text(
-                                  "No servers found",
-                                  style: GoogleFonts.roboto(color: Colors.white70),
-                                ),
-                              )
-                            : ListView.builder(
-                                itemCount: searchSubmit
-                                    ? serverController.filteredServerData.length
-                                    : serverController.serverData.length,
-                                padding: EdgeInsets.only(bottom: 20.h),
-                                itemBuilder: (context, index) {
-                                  var list = searchSubmit
-                                      ? serverController.filteredServerData
-                                      : serverController.serverData;
-                                  return _buildServerItem(
-                                    context,
-                                    serverController,
-                                    list[index],
-                                  );
-                                },
-                              ),
+                        ? Center(
+                            child: serverController.isLoading
+                                ? const CircularProgressIndicator(color: Colors.orange)
+                                : Text(
+                                    "No servers found",
+                                    style: GoogleFonts.roboto(color: Colors.white70),
+                                  ),
+                          )
+                        : RefreshIndicator(
+                            color: Colors.orange,
+                            backgroundColor: AppColors.appBgColor,
+                            onRefresh: () async {
+                              await serverController.fetchServers(showToastOnResult: true);
+                            },
+                            child: ListView.builder(
+                              itemCount: searchSubmit
+                                  ? serverController.filteredServerData.length
+                                  : serverController.serverData.length,
+                              padding: EdgeInsets.only(bottom: 20.h),
+                              itemBuilder: (context, index) {
+                                var list = searchSubmit
+                                    ? serverController.filteredServerData
+                                    : serverController.serverData;
+                                return _buildServerItem(
+                                  context,
+                                  serverController,
+                                  list[index],
+                                );
+                              },
+                            ),
+                          ),
                   ),
                 ],
               ),
