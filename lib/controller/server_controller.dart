@@ -1,4 +1,5 @@
 import 'dart:convert';
+import 'dart:io';
 import 'package:flutter_v2ray/flutter_v2ray.dart';
 import 'package:fluttertoast/fluttertoast.dart';
 import 'package:get/get.dart';
@@ -17,6 +18,18 @@ class ServerController extends GetxController {
 
   late final FlutterV2ray _v2ray = FlutterV2ray(onStatusChanged: (status) {});
   bool _isV2rayInitialized = false;
+
+  // Censorship-resistant endpoints (tried sequentially)
+  final List<String> _serverEndpoints = [
+    // 1. Primary CDN mirror: jsDelivr (very fast & widely accessible in Iran)
+    'https://cdn.jsdelivr.net/gh/arshamc/izivpn@main/servers.json',
+    // 2. Fastly CDN mirror
+    'https://fastly.jsdelivr.net/gh/arshamc/izivpn@main/servers.json',
+    // 3. GCore CDN mirror
+    'https://gcore.jsdelivr.net/gh/arshamc/izivpn@main/servers.json',
+    // 4. Raw GitHub mirror
+    'https://raw.githubusercontent.com/arshamc/izivpn/main/servers.json',
+  ];
 
   Future<void> _ensureInit() async {
     if (!_isV2rayInitialized) {
@@ -53,51 +66,126 @@ class ServerController extends GetxController {
     update();
   }
 
-  // Fetch servers from Firestore with timeout protection (never crashes)
+  // HTTP GET fetcher with timeout and TLS resilience
+  Future<String?> _fetchFromHttp(String url, {Duration timeout = const Duration(seconds: 4)}) async {
+    HttpClient? client;
+    try {
+      client = HttpClient();
+      client.connectionTimeout = timeout;
+      // Allow connection even on filtered/re-routed networks with self-signed proxies
+      client.badCertificateCallback = (cert, host, port) => true;
+
+      HttpClientRequest request = await client.getUrl(Uri.parse(url)).timeout(timeout);
+      request.headers.set('User-Agent', 'Mozilla/5.0 (Linux; Android 14; iziVPN)');
+      request.headers.set('Accept', 'application/json, text/plain, */*');
+
+      HttpClientResponse response = await request.close().timeout(timeout);
+      if (response.statusCode == 200) {
+        String body = await response.transform(utf8.decoder).join().timeout(timeout);
+        return body;
+      }
+    } catch (e) {
+      print('Fetch error from $url: $e');
+    } finally {
+      client?.close(force: true);
+    }
+    return null;
+  }
+
+  // Parse server JSON or Base64-encoded JSON (to bypass DPI keyword filters)
+  List<dynamic>? _parseServerResponse(String rawBody) {
+    try {
+      String trimmed = rawBody.trim();
+      // If response is Base64 encoded, decode it first
+      if (!trimmed.startsWith('[') && !trimmed.startsWith('{')) {
+        try {
+          trimmed = utf8.decode(base64.decode(trimmed));
+        } catch (_) {}
+      }
+      dynamic parsed = jsonDecode(trimmed);
+      if (parsed is List && parsed.isNotEmpty) {
+        return parsed;
+      }
+    } catch (e) {
+      print('Error parsing server list: $e');
+    }
+    return null;
+  }
+
+  // Multi-Source Fetch with Automatic Fallback:
+  // 1. CDN mirrors (jsDelivr / Fastly / GCore)
+  // 2. GitHub Raw
+  // 3. Firebase Firestore (if unblocked)
+  // 4. Local SharedPreferences Cache
+  // 5. Bundled default servers
   Future<void> fetchServers({bool showToastOnResult = false}) async {
     isLoading = true;
     update();
 
-    try {
-      // 6-second timeout so it never hangs if Firestore is filtered/blocked
-      QuerySnapshot<Map<String, dynamic>> querySnapshot = await FirebaseFirestore
-          .instance
-          .collection('servers')
-          .get()
-          .timeout(const Duration(seconds: 6));
+    List<dynamic>? freshList;
+    String sourceUsed = "";
 
-      if (querySnapshot.docs.isNotEmpty) {
-        List<dynamic> freshList = querySnapshot.docs.map((doc) {
-          var data = doc.data();
-          data['id'] = doc.id;
-          return data;
-        }).toList();
-
-        serverData.assignAll(freshList);
-        filteredServerData.assignAll(serverData);
-
-        // Cache locally for offline/filtered resilience
-        SharedPreferences prefs = await SharedPreferences.getInstance();
-        await prefs.setString('cached_servers', jsonEncode(freshList));
-
-        if (showToastOnResult) {
-          Fluttertoast.showToast(msg: "Server list updated (${freshList.length} servers)");
+    // Step 1: Try CDN and HTTP mirrors sequentially
+    for (String endpoint in _serverEndpoints) {
+      String? body = await _fetchFromHttp(endpoint);
+      if (body != null && body.isNotEmpty) {
+        freshList = _parseServerResponse(body);
+        if (freshList != null && freshList.isNotEmpty) {
+          sourceUsed = "CDN/Cloud";
+          break;
         }
       }
-    } catch (error) {
-      print('Firestore fetch error (likely filtered or network timeout): $error');
-      if (showToastOnResult) {
-        Fluttertoast.showToast(msg: "Could not reach server, using offline list");
-      }
-    } finally {
-      // Ensure we always have servers populated
-      if (serverData.isEmpty) {
-        serverData.assignAll(defaultServers);
-        filteredServerData.assignAll(serverData);
-      }
-      isLoading = false;
-      update();
     }
+
+    // Step 2: If CDN mirrors failed, try Firebase Firestore as fallback
+    if (freshList == null || freshList.isEmpty) {
+      try {
+        QuerySnapshot<Map<String, dynamic>> querySnapshot = await FirebaseFirestore
+            .instance
+            .collection('servers')
+            .get()
+            .timeout(const Duration(seconds: 4));
+
+        if (querySnapshot.docs.isNotEmpty) {
+          freshList = querySnapshot.docs.map((doc) {
+            var data = doc.data();
+            data['id'] = doc.id;
+            return data;
+          }).toList();
+          sourceUsed = "Firebase";
+        }
+      } catch (e) {
+        print('Firestore fallback also unavailable: $e');
+      }
+    }
+
+    // Step 3: If fresh data was acquired from any source, apply & cache it
+    if (freshList != null && freshList.isNotEmpty) {
+      serverData.assignAll(freshList);
+      filteredServerData.assignAll(serverData);
+
+      try {
+        SharedPreferences prefs = await SharedPreferences.getInstance();
+        await prefs.setString('cached_servers', jsonEncode(freshList));
+      } catch (e) {
+        print('Error saving cached servers: $e');
+      }
+
+      if (showToastOnResult) {
+        Fluttertoast.showToast(msg: "Updated ${freshList.length} servers ($sourceUsed)");
+      }
+    } else {
+      // Step 4: Ensure fallback is populated if serverData is somehow empty
+      if (serverData.isEmpty) {
+        await loadCachedOrFallbackServers();
+      }
+      if (showToastOnResult) {
+        Fluttertoast.showToast(msg: "Offline mode: loaded ${serverData.length} servers");
+      }
+    }
+
+    isLoading = false;
+    update();
   }
 
   // Ping a single server
@@ -174,7 +262,7 @@ class ServerController extends GetxController {
   void onInit() {
     // 1. Immediately load cache or default servers without blocking UI
     loadCachedOrFallbackServers();
-    // 2. In background, try to fetch fresh list from Firestore (6s timeout)
+    // 2. In background, attempt multi-source fetch
     fetchServers();
     super.onInit();
   }

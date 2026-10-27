@@ -1,0 +1,130 @@
+[
+  {
+    "id": "msK8E5pqOetnJ4uMmuV3",
+    "serverName": "Germany Server 1",
+    "country": "Germany",
+    "flag": "de",
+    "vip": false,
+    "config": "vless://50414e45-4c5f-5a45-5553-df0ccb215ccc@147.78.140.109:2083?path=%2Fstream%2FPANEL_ZEUS%2Fdf0ccb215ccc&security=tls&encryption=none&host=bvzh11e2unzs.m-ds7yf-5n5l7t43sh77kw8.workers.dev&fp=unsafe&type=ws&sni=bvzh11e2unzs.m-ds7yf-5n5l7t43sh77kw8.workers.dev#ZEUS%20%7C%20%F0%9F%8C%90%20%7C%20non-ip"
+  },
+  {
+    "id": "JN86fApY49mMGnD6AmBH",
+    "serverName": "United States 2 (Kansas City)",
+    "country": "United States",
+    "flag": "us",
+    "vip": false,
+    "config": "vless://e55f018b-62e1-4319-8fbe-9e263b0e5631@grimness-backlogs.cdn-content.com:443?encryption=none&type=ws&path=%2Fws&host=grimness-backlogs.cdn-content.com&security=tls&sni=grimness-backlogs.cdn-content.com&fp=chrome&alpn=http%2F1.1#FreeSocks%20%C2%B7%20Kansas%20City%20%C2%B7%20CEAK"
+  },
+  {
+    "id": "YwiUF9351A2PvUi9aFCq",
+    "serverName": "Germany Server 2 (VLESS)",
+    "country": "Germany",
+    "flag": "de",
+    "vip": false,
+    "config": "vless://aa5d861a-7799-41a7-bdf4-7a6414cf98fd@hikvision-plus.com:2053?encryption=none&security=tls&sni=uwu.blueknightnet.qzz.io&fp=chrome&alpn=h2&insecure=0&allowInsecure=0&type=ws&host=uwu.blueknightnet.qzz.io&path=%2F%40BlueKnight_net--%40BlueKnight_net--%40BlueKnight_net--%40BlueKnight_net--%40BlueKnight_net--%40BlueKnight_net#%E2%98%81%EF%B8%8F%F0%9F%87%A9%F0%9F%87%AADE-%40ByGFW"
+  },
+  {
+    "id": "9FyOJOsffgLpFCIOp8Oe",
+    "serverName": "Germany Server 3 (Trojan)",
+    "country": "Germany",
+    "flag": "de",
+    "vip": false,
+    "config": "trojan://5j3xqsajt1474jb3@uwu.blueknightnet.qzz.io:2087?security=tls&sni=uwu.dianaw.cc.cd&fp=chrome&alpn=h2&insecure=0&allowInsecure=0&type=ws&host=uwu.dianaw.cc.cd&path=%2F%40BlueKnight_net--%40BlueKnight_net--%40BlueKnight_net#%E2%98%81%EF%B8%8F%F0%9F%87%A9%F0%9F%87%AADE-%40ByGFW"
+  },
+  {
+    "id": "cveSZhHruOInzc9xmRmd",
+    "serverName": "Germany Server 4 (VLESS)",
+    "country": "Germany",
+    "flag": "de",
+    "vip": false,
+    "config": "vless://497f5381-3533-4c6a-939c-66eb3a7de108@188.114.98.0:443?encryption=none&security=tls&sni=cdn.topingr.ir&fp=chrome&alpn=http%2F1.1&insecure=0&allowInsecure=0&ech=cloudflare-ech.com%2Budp%3A%2F%2F1.1.1.1&type=ws&host=cdn.topingr.ir&path=%2Fgropcdn#%E2%98%81%EF%B8%8F%F0%9F%87%A9%F0%9F%87%AADE-%40ByGFW"
+  },
+  {
+    "id": "bombR2AQKj3ps0s7893O",
+    "serverName": "Germany Server 5 (VLESS)",
+    "country": "Germany",
+    "flag": "de",
+    "vip": false,
+    "config": "vless://e3fb01b6-69b4-41d7-babf-696d992de194@172.67.181.232:2052?encryption=none&security=none&type=ws&host=uwu.blueknightnet.qzz.io&path=%2F%40BlueKnight_net--%40BlueKnight_net#%E2%98%81%EF%B8%8F%F0%9F%87%A9%F0%9F%87%AADE-%40ByGFW"
+  },
+  {
+    "id": "P3omdoixWK2lSlNiY9Pt",
+    "serverName": "Japan Server 1 (VLESS)",
+    "country": "Japan",
+    "flag": "jp",
+    "vip": false,
+    "config": "vless://e6df2095-a73c-4043-8693-8d5a03686870@cf.090227.xyz:443?encryption=none&security=tls&sni=lucasjow.us.ci&fp=qq&insecure=0&allowInsecure=0&type=ws&host=lucasjow.us.ci&path=%2Fcart%2Fdocs%2Fwww%2Fproxyip%3D108.160.132.132#%E2%98%81%EF%B8%8F%F0%9F%87%AF%F0%9F%87%B5JP-%40ByGFW"
+  },
+  {
+    "id": "LgPAGztXL66S02rp9qJs",
+    "serverName": "Turkey Server 1 (Trojan)",
+    "country": "Turkey",
+    "flag": "tr",
+    "vip": false,
+    "config": "trojan://e309e031-991e-4656-9934-44d10deb8fd8@nimm.mpd.cc.cd:2053?security=tls&sni=nimm.mpd.cc.cd&insecure=0&allowInsecure=0&type=ws&host=nimm.mpd.cc.cd&path=%2F0962#%E2%98%81%EF%B8%8F%F0%9F%87%B9%F0%9F%87%B7TR-%40ByGFW"
+  },
+  {
+    "id": "U49saAHfOkJaRVA1xNZk",
+    "serverName": "Global Server 1 (VLESS)",
+    "country": "Global",
+    "flag": "un",
+    "vip": false,
+    "config": "vless://e5cc16a6-ea42-46b2-82ae-ad2157e1641b@172.64.150.28:2082?encryption=none&security=none&type=ws&host=hhlfy.twiladaphne.ndjp.net&path=%2Ffp#%E2%98%81%EF%B8%8F%F0%9F%87%BA%F0%9F%87%B3UN-%40ByGFW"
+  },
+  {
+    "id": "BPBo9ovqSaVFcpeEZHkk",
+    "serverName": "Global Server 2 (VLESS)",
+    "country": "Global",
+    "flag": "un",
+    "vip": false,
+    "config": "vless://e5cc16a6-ea42-46b2-82ae-ad2157e1641b@172.64.150.28:2082?encryption=none&security=none&sni=hhlfy.twiladaphne.ndjp.net&fp=chrome&type=ws&host=hhlfy.twiladaphne.ndjp.net&path=%2Ffp#%E2%98%81%EF%B8%8F%F0%9F%87%BA%F0%9F%87%B3UN-%40ByGFW"
+  },
+  {
+    "id": "nz3b41tvoMVPnKq2lKmh",
+    "serverName": "Global Server 3 (VLESS)",
+    "country": "Global",
+    "flag": "un",
+    "vip": false,
+    "config": "vless://e5cc16a6-ea42-46b2-82ae-ad2157e1641b@104.18.0.181:8080?encryption=none&security=none&type=ws&host=hhlfy.twiladaphne.ndjp.net&path=%2F#%E2%98%81%EF%B8%8F%F0%9F%87%BA%F0%9F%87%B3UN-%40ByGFW"
+  },
+  {
+    "id": "OAd64lwKrx0xkd1sM3ew",
+    "serverName": "Global Server 4 (VLESS)",
+    "country": "Global",
+    "flag": "un",
+    "vip": false,
+    "config": "vless://e3fb01b6-69b4-41d7-babf-696d992de194@172.67.181.232:2053?encryption=none&security=tls&sni=uwu.blueknightnet.qzz.io&fp=chrome&alpn=h2&insecure=0&allowInsecure=0&type=ws&host=uwu.blueknightnet.qzz.io&path=%2F%40BlueKnight_net--%40BlueKnight_net--%40BlueKnight_net--%40BlueKnight_net--%40BlueKnight_net--%40BlueKnight_net#%E2%98%81%EF%B8%8F%F0%9F%87%BA%F0%9F%87%B3UN-%40ByGFW"
+  },
+  {
+    "id": "h1or6McDOWJ2RylT82v8",
+    "serverName": "Global Server 5 (Trojan)",
+    "country": "Global",
+    "flag": "un",
+    "vip": false,
+    "config": "trojan://humanity@188.114.97.6:443?security=tls&sni=www.pleadcourt.org&fp=chrome&alpn=http%2F1.1&insecure=0&allowInsecure=0&ech=cloudflare-ech.com%2Budp%3A%2F%2F1.1.1.1&type=ws&host=www.pleadcourt.org&path=%2Fassignment#%E2%98%81%EF%B8%8F%F0%9F%87%BA%F0%9F%87%B3UN-%40ByGFW"
+  },
+  {
+    "id": "Zs9ZXHZ6BnbkldH6cJrJ",
+    "serverName": "Global Server 6 (VLESS)",
+    "country": "Global",
+    "flag": "un",
+    "vip": false,
+    "config": "vless://aa5d861a-7799-41a7-bdf4-7a6414cf98fd@104.21.65.43:2052?encryption=none&security=none&type=ws&host=uwu.blueknightnet.qzz.io&path=%2F%40BlueKnight_net--%40BlueKnight_net#%E2%98%81%EF%B8%8F%F0%9F%87%BA%F0%9F%87%B3UN-%40ByGFW"
+  },
+  {
+    "id": "wLWwqlG71qFT6sGSx2vu",
+    "serverName": "Global Server 7 (Trojan)",
+    "country": "Global",
+    "flag": "un",
+    "vip": false,
+    "config": "trojan://av7fquzvuc99xcs9@172.67.140.126:2087?security=tls&sni=uwu.dianaw.cc.cd&fp=chrome&alpn=h2&insecure=0&allowInsecure=0&type=ws&host=uwu.dianaw.cc.cd&path=%2F%40BlueKnight_net--%40BlueKnight_net--%40BlueKnight_net#%E2%98%81%EF%B8%8F%F0%9F%87%BA%F0%9F%87%B3UN-%40ByGFW"
+  },
+  {
+    "id": "gphfkAy3nNzr9wzao82n",
+    "serverName": "Global Server 8 (VLESS)",
+    "country": "Global",
+    "flag": "un",
+    "vip": false,
+    "config": "vless://e3fb01b6-69b4-41d7-babf-696d992de194@freesocks.work:2053?encryption=none&security=tls&sni=uwu.blueknightnet.qzz.io&fp=chrome&alpn=h2&insecure=0&allowInsecure=0&type=ws&host=uwu.blueknightnet.qzz.io&path=%2F%40BlueKnight_net--%40BlueKnight_net--%40BlueKnight_net--%40BlueKnight_net--%40BlueKnight_net--%40BlueKnight_net#%E2%98%81%EF%B8%8F%F0%9F%87%BA%F0%9F%87%B3UN-%40ByGFW"
+  }
+]
