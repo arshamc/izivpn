@@ -217,58 +217,68 @@ class _HomeScreenState extends State<HomeScreen> {
     final isConnecting = state == "CONNECTING";
     final bgAsset = _getBackgroundForState(state, _country);
 
+    final screenH = MediaQuery.of(context).size.height;
+    final bottomCardHeight = (screenH * 0.49).clamp(390.0, 520.0);
+
     return Scaffold(
       backgroundColor: isDark ? AppColors.obsidianBlack : const Color(0xFF8FA5B5),
-      body: Stack(
-        children: [
-          // 1. Animated Atmospheric Background Switcher
-          Positioned.fill(
-            child: AnimatedSwitcher(
-              duration: const Duration(milliseconds: 500),
-              switchInCurve: Curves.easeInOutCubic,
-              switchOutCurve: Curves.easeInOutCubic,
-              transitionBuilder: (child, animation) {
-                return FadeTransition(
-                  opacity: animation,
-                  child: ScaleTransition(
-                    scale: Tween<double>(begin: 1.04, end: 1.0).animate(animation),
-                    child: child,
-                  ),
-                );
-              },
-              child: Image.asset(
-                bgAsset,
-                key: ValueKey<String>(bgAsset),
-                fit: BoxFit.cover,
-                width: double.infinity,
-                height: double.infinity,
-                errorBuilder: (context, error, stackTrace) {
-                  return Container(
-                    color: isDark ? AppColors.obsidianBlack : const Color(0xFF8FA5B5),
+      body: SizedBox.expand(
+        child: Stack(
+          fit: StackFit.expand,
+          children: [
+            // 1. Animated Atmospheric Background Switcher
+            Positioned.fill(
+              child: AnimatedSwitcher(
+                duration: const Duration(milliseconds: 500),
+                switchInCurve: Curves.easeInOutCubic,
+                switchOutCurve: Curves.easeInOutCubic,
+                transitionBuilder: (child, animation) {
+                  return FadeTransition(
+                    opacity: animation,
+                    child: ScaleTransition(
+                      scale: Tween<double>(begin: 1.04, end: 1.0).animate(animation),
+                      child: child,
+                    ),
                   );
                 },
+                child: Image.asset(
+                  bgAsset,
+                  key: ValueKey<String>(bgAsset),
+                  fit: BoxFit.cover,
+                  width: double.infinity,
+                  height: double.infinity,
+                  errorBuilder: (context, error, stackTrace) {
+                    return Container(
+                      color: isDark ? AppColors.obsidianBlack : const Color(0xFF8FA5B5),
+                    );
+                  },
+                ),
               ),
             ),
-          ),
 
-          // Dark mode shader tint
-          if (isDark)
+            // Dark mode shader tint
+            if (isDark)
+              Positioned.fill(
+                child: Container(
+                  color: AppColors.obsidianBlack.withOpacity(0.55),
+                ),
+              ),
+
+            // 2. Interactive Flight Arc Overlay (active during CONNECTING)
             Positioned.fill(
-              child: Container(
-                color: AppColors.obsidianBlack.withOpacity(0.55),
-              ),
+              child: FlightArcOverlay(isConnecting: isConnecting),
             ),
 
-          // 2. Interactive Flight Arc Overlay (active during CONNECTING)
-          Positioned.fill(
-            child: FlightArcOverlay(isConnecting: isConnecting),
-          ),
-
-          // 3. Top Transparent Brand Header
-          SafeArea(
-            child: Padding(
-              padding: EdgeInsets.symmetric(horizontal: 16.w, vertical: 8.h),
-              child: Row(
+            // 3. Top Transparent Brand Header
+            Positioned(
+              top: 0,
+              left: 0,
+              right: 0,
+              child: SafeArea(
+                bottom: false,
+                child: Padding(
+                  padding: EdgeInsets.symmetric(horizontal: 16.w, vertical: 8.h),
+                  child: Row(
                 children: [
                   // Hamburger Menu Button
                   GestureDetector(
@@ -407,6 +417,7 @@ class _HomeScreenState extends State<HomeScreen> {
               ),
             ),
           ),
+        ),
 
           // 4. Bottom Foreground Section with Coral Wave & White Fog
           Positioned(
@@ -414,7 +425,7 @@ class _HomeScreenState extends State<HomeScreen> {
             right: 0,
             bottom: 0,
             child: CoralWaveWidget(
-              height: 415.h,
+              height: bottomCardHeight,
               child: Padding(
                 padding: EdgeInsets.symmetric(horizontal: 20.w),
                 child: Column(
@@ -670,6 +681,7 @@ class _HomeScreenState extends State<HomeScreen> {
           ),
         ],
       ),
-    );
-  }
+    ),
+  );
+}
 }

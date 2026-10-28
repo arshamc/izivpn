@@ -22,22 +22,27 @@ class CoralWaveWidget extends StatelessWidget {
             ? constraints.maxWidth
             : MediaQuery.of(context).size.width;
 
-        return Stack(
-          children: [
-            CustomPaint(
-              size: Size(w, height),
-              painter: _CoralWavePainter(
-                fillColor: fillColor,
-                strokeColor: AppColors.brandCoral,
+        return SizedBox(
+          width: w,
+          height: height,
+          child: Stack(
+            clipBehavior: Clip.none,
+            children: [
+              CustomPaint(
+                size: Size(w, height),
+                painter: _CoralWavePainter(
+                  fillColor: fillColor,
+                  strokeColor: AppColors.brandCoral,
+                ),
               ),
-            ),
-            Container(
-              height: height,
-              width: w,
-              padding: const EdgeInsets.only(top: 36),
-              child: child,
-            ),
-          ],
+              Container(
+                height: height,
+                width: w,
+                padding: const EdgeInsets.only(top: 36),
+                child: child,
+              ),
+            ],
+          ),
         );
       },
     );
@@ -88,8 +93,8 @@ class _CoralWavePainter extends CustomPainter {
     canvas.drawPath(path, strokePaint);
 
     // Complete the path down to the bottom edges for solid fog fill
-    path.lineTo(w, h);
-    path.lineTo(0, h);
+    path.lineTo(w, h + 100);
+    path.lineTo(0, h + 100);
     path.close();
 
     canvas.drawPath(path, fillPaint);
