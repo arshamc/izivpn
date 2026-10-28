@@ -1,0 +1,22 @@
+Analyzing izivpn...                                             
+
+warning • The include file 'package:flutter_lints/flutter.yaml' in '/home/runner/work/izivpn/izivpn/analysis_options.yaml' can't be found when analyzing '/home/runner/work/izivpn/izivpn' • analysis_options.yaml:10:10 • include_file_not_found
+warning • Unused import: 'package:get/get.dart' • lib/screen/drawer/animated_drawer.dart:4:8 • unused_import
+warning • Unused import: '../../widget/frosted_card.dart' • lib/screen/home/home_screen.dart:16:8 • unused_import
+  error • The named parameter 'height' is required, but there's no corresponding argument • lib/screen/home/home_screen.dart:508:40 • missing_required_argument
+  error • The named parameter 'isGlowing' isn't defined • lib/screen/home/home_screen.dart:508:56 • undefined_named_parameter
+  error • Expected to find ')' • lib/screen/location/location_screen.dart:471:33 • expected_token
+  error • The argument for the named parameter 'child' was already specified • lib/screen/location/location_screen.dart:474:29 • duplicate_named_argument
+  error • Expected to find ';' • lib/screen/location/location_screen.dart:498:27 • expected_token
+warning • Dead code • lib/screen/location/location_screen.dart:498:28 • dead_code
+  error • Expected an identifier • lib/screen/location/location_screen.dart:498:28 • missing_identifier
+  error • Expected to find ';' • lib/screen/location/location_screen.dart:498:28 • expected_token
+  error • Unexpected text ';' • lib/screen/location/location_screen.dart:498:28 • unexpected_token
+  error • Expected an identifier • lib/screen/location/location_screen.dart:499:25 • missing_identifier
+  error • Unexpected text ';' • lib/screen/location/location_screen.dart:499:25 • unexpected_token
+   info • 'LinearStrokeCap' is deprecated and shouldn't be used. This property is no longer used, please use barRadius instead • lib/screen/speed_test/progress_bar.dart:19:24 • deprecated_member_use
+warning • Unused import: 'dart:async' • lib/screen/splash/splash_screen.dart:1:8 • unused_import
+warning • Unused import: 'dart:math' • lib/widget/circular_flag.dart:1:8 • unused_import
+warning • The value of the local variable 'w' isn't used • lib/widget/circular_flag.dart:68:11 • unused_local_variable
+warning • The value of the local variable 'h' isn't used • lib/widget/circular_flag.dart:69:11 • unused_local_variable
+
