@@ -111,15 +111,21 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 
   Future<void> _startVpnConnection() async {
-    if (_config != null && _config!.isNotEmpty) {
+    if (_config != null && _config!.trim().isNotEmpty) {
       if (v2rayStatus.value.state == "DISCONNECTED") {
         try {
           V2RayURL parser = FlutterV2ray.parseFromURL(_config!);
+          final fullConfig = parser.getFullConfiguration();
+          if (fullConfig.isEmpty) {
+            Fluttertoast.showToast(msg: "Configuration error: Empty config");
+            return;
+          }
           if (await flutterV2ray.requestPermission()) {
             await flutterV2ray.startV2Ray(
               remark: parser.remark.isNotEmpty ? parser.remark : (_serverName ?? "IZI VPN"),
-              config: parser.getFullConfiguration(),
+              config: fullConfig,
               proxyOnly: false,
+              notificationDisconnectButtonName: "DISCONNECT",
             );
             if (mounted) setState(() {});
           }
