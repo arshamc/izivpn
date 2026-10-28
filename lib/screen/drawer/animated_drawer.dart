@@ -1,176 +1,346 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:flutter_zoom_drawer/flutter_zoom_drawer.dart';
 import 'package:get/get.dart';
 import 'package:share_extend/share_extend.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import 'package:url_launcher/url_launcher.dart';
-
-import '../../utils/app_constant.dart';
+import '../../utils/app_colors.dart';
+import '../../widget/frosted_card.dart';
 import '../home/home_screen.dart';
-import '../notification/notification_screen.dart';
-import '../speed_test/speed_test_screen.dart';
 
-class AnimatedDrawerScreen extends StatefulWidget {
+final ZoomDrawerController zoomDrawerController = ZoomDrawerController();
+
+class AnimatedDrawerScreen extends StatelessWidget {
+  const AnimatedDrawerScreen({super.key});
+
   @override
-  _AnimatedDrawerScreenState createState() => _AnimatedDrawerScreenState();
+  Widget build(BuildContext context) {
+    return ZoomDrawer(
+      controller: zoomDrawerController,
+      menuScreen: const SettingsDrawerContent(),
+      mainScreen: const HomeScreen(),
+      borderRadius: 24.0,
+      showShadow: true,
+      angle: -6.0,
+      slideWidth: MediaQuery.of(context).size.width * 0.78,
+      menuBackgroundColor: const Color(0xFF1E293B),
+      shadowLayer1Color: AppColors.brandCoral.withOpacity(0.15),
+      shadowLayer2Color: Colors.black.withOpacity(0.2),
+    );
+  }
 }
 
-class _AnimatedDrawerScreenState extends State<AnimatedDrawerScreen> {
-  final ZoomDrawerController zoomDrawerController = ZoomDrawerController();
+class SettingsDrawerContent extends StatefulWidget {
+  const SettingsDrawerContent({super.key});
+
+  @override
+  State<SettingsDrawerContent> createState() => _SettingsDrawerContentState();
+}
+
+class _SettingsDrawerContentState extends State<SettingsDrawerContent> {
+  bool _killSwitch = true;
+  bool _splitTunneling = false;
+  bool _autoReconnect = true;
+  bool _protocolVless = true;
+
+  @override
+  void initState() {
+    super.initState();
+    _loadSettings();
+  }
+
+  Future<void> _loadSettings() async {
+    final prefs = await SharedPreferences.getInstance();
+    setState(() {
+      _killSwitch = prefs.getBool('kill_switch') ?? true;
+      _splitTunneling = prefs.getBool('split_tunneling') ?? false;
+      _autoReconnect = prefs.getBool('auto_reconnect_setting') ?? true;
+      _protocolVless = prefs.getBool('protocol_vless') ?? true;
+    });
+  }
+
+  Future<void> _saveSetting(String key, bool val) async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setBool(key, val);
+  }
+
+  Widget _buildToggleTile({
+    required IconData icon,
+    required String title,
+    required bool value,
+    required ValueChanged<bool> onChanged,
+  }) {
+    return FrostedCard(
+      padding: EdgeInsets.symmetric(horizontal: 16.w, vertical: 8.h),
+      borderRadius: 18.r,
+      child: Row(
+        children: [
+          Container(
+            width: 36.w,
+            height: 36.w,
+            decoration: BoxDecoration(
+              color: Colors.white.withOpacity(0.2),
+              borderRadius: BorderRadius.circular(10.r),
+            ),
+            child: Icon(icon, color: AppColors.headingText(context), size: 18),
+          ),
+          SizedBox(width: 12.w),
+          Expanded(
+            child: Text(
+              title,
+              style: TextStyle(
+                fontSize: 15.sp,
+                fontWeight: FontWeight.w700,
+                color: AppColors.headingText(context),
+              ),
+            ),
+          ),
+          Switch(
+            value: value,
+            activeColor: Colors.white,
+            activeTrackColor: AppColors.brandCoral,
+            inactiveThumbColor: Colors.white,
+            inactiveTrackColor: const Color(0xFF64748B),
+            onChanged: onChanged,
+          ),
+        ],
+      ),
+    );
+  }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor:  Color(0xffF57D1F),
-      appBar: AppBar(
-        backgroundColor: Color(0xffF57D1F),
-        leading: GestureDetector(
-          onTap: (){
-            zoomDrawerController.toggle!();
-          },
-          child: Align(
-            alignment: Alignment.topLeft,
-            child: Container(
-              height: 50,
-              width: 80,
-              decoration: BoxDecoration(
-                color: bgColor,
-              ),
-              child: Icon(
-                Icons.menu_outlined,
-                size: 20,
-                color: Colors.white,
-              ),
-            ),
-          ),
-        ),
-        actions: [
-          Padding(
-            padding: const EdgeInsets.symmetric(
-              horizontal: 20,
-              vertical: 8
-            ),
-            child: Column(
-              children: [
-                GestureDetector(
-                  onTap: (){
-                    Get.to(()=> NotificationScreen());
-                  },
-                  child: CircleAvatar(
-                    backgroundColor: Colors.black54,
-                    radius: 20,
-                    child: Icon(Icons.notifications,
-                      color: Colors.white,size: 24,),
-                  ),
-                ),
-              ],
-            ),
-          )
-        ],
-      ),
-      body: ZoomDrawer(
-        shadowLayer1Color: Colors.deepOrange.withOpacity(0.3),
-        controller: zoomDrawerController,
-        menuScreen: MenuScreen(),
-        mainScreen: HomeScreen(),
-        borderRadius: 12.0,
-        showShadow: true,
-        menuBackgroundColor: Color(0xffF57D1F),
-        angle: -8.0,
-        slideWidth: MediaQuery.of(context).size.width * 0.60,
-      ),
-    );
-  }
-}
-
-final ZoomDrawerController zoomDrawerController = ZoomDrawerController();
-class MenuScreen extends StatelessWidget {
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      color: Color(0xffF57D1F),
-      child: ListView(
-        padding: EdgeInsets.only(top: 10),
+      backgroundColor: Colors.transparent,
+      body: Stack(
         children: [
-          ListTile(
-            leading: CircleAvatar(
-                backgroundColor: buttonColor,
-                child: Icon(Icons.home,color: Colors.white,)),
-            title: Text('Home',style: TextStyle(
-                color: Colors.white,fontSize: 16),),
-            onTap: () {
-              ZoomDrawer.of(context)?.close();
-            },
+          // Background misty artwork
+          Positioned.fill(
+            child: Image.asset(
+              'assets/images/bg_inner_screens_mist.jpg',
+              fit: BoxFit.cover,
+            ),
           ),
 
+          SafeArea(
+            child: SingleChildScrollView(
+              padding: EdgeInsets.fromLTRB(16.w, 20.h, 16.w, 30.h),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  // App Brand Badge & Version
+                  Row(
+                    children: [
+                      Container(
+                        width: 44.w,
+                        height: 44.w,
+                        decoration: BoxDecoration(
+                          color: AppColors.brandCoral.withOpacity(0.15),
+                          shape: BoxShape.circle,
+                          border: Border.all(
+                            color: AppColors.brandCoral,
+                            width: 1.5,
+                          ),
+                        ),
+                        child: Icon(
+                          Icons.security_rounded,
+                          color: AppColors.brandCoral,
+                          size: 24.sp,
+                        ),
+                      ),
+                      SizedBox(width: 12.w),
+                      Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            'izi vpn',
+                            style: TextStyle(
+                              fontSize: 24.sp,
+                              fontWeight: FontWeight.w900,
+                              color: AppColors.headingText(context),
+                              letterSpacing: -0.5,
+                            ),
+                          ),
+                          Text(
+                            'v1.2.0',
+                            style: TextStyle(
+                              fontSize: 13.sp,
+                              fontWeight: FontWeight.w600,
+                              color: AppColors.subtitleText(context),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ],
+                  ),
+                  SizedBox(height: 24.h),
 
-          SizedBox(height: 4,),
+                  // Core VPN Toggles
+                  _buildToggleTile(
+                    icon: Icons.lock_outline_rounded,
+                    title: 'Kill Switch',
+                    value: _killSwitch,
+                    onChanged: (v) {
+                      setState(() => _killSwitch = v);
+                      _saveSetting('kill_switch', v);
+                    },
+                  ),
+                  SizedBox(height: 10.h),
 
-          ListTile(
-            leading: CircleAvatar(
-                backgroundColor: buttonColor,
-                child: Icon(Icons.speed,color: Colors.white,)),
-            title: Text('Speed Test',style: TextStyle(color:
-            Colors.white,fontSize: 16),),
-            onTap: () {
-               Get.to(()=>SpeedTestScreen(),transition: Transition.rightToLeft);
-            },
+                  _buildToggleTile(
+                    icon: Icons.alt_route_rounded,
+                    title: 'Split Tunneling',
+                    value: _splitTunneling,
+                    onChanged: (v) {
+                      setState(() => _splitTunneling = v);
+                      _saveSetting('split_tunneling', v);
+                    },
+                  ),
+                  SizedBox(height: 10.h),
+
+                  _buildToggleTile(
+                    icon: Icons.sync_rounded,
+                    title: 'Auto Reconnect',
+                    value: _autoReconnect,
+                    onChanged: (v) {
+                      setState(() => _autoReconnect = v);
+                      _saveSetting('auto_reconnect_setting', v);
+                    },
+                  ),
+                  SizedBox(height: 10.h),
+
+                  _buildToggleTile(
+                    icon: Icons.hub_outlined,
+                    title: 'Protocol VLESS',
+                    value: _protocolVless,
+                    onChanged: (v) {
+                      setState(() => _protocolVless = v);
+                      _saveSetting('protocol_vless', v);
+                    },
+                  ),
+                  SizedBox(height: 20.h),
+
+                  // Google Play Compliance Grouped Card
+                  FrostedCard(
+                    padding: EdgeInsets.symmetric(horizontal: 16.w, vertical: 8.h),
+                    borderRadius: 20.r,
+                    child: Column(
+                      children: [
+                        ListTile(
+                          contentPadding: EdgeInsets.zero,
+                          leading: Icon(
+                            Icons.privacy_tip_outlined,
+                            color: AppColors.headingText(context),
+                            size: 20,
+                          ),
+                          title: Text(
+                            'Privacy Policy',
+                            style: TextStyle(
+                              fontSize: 15.sp,
+                              fontWeight: FontWeight.w600,
+                              color: AppColors.headingText(context),
+                            ),
+                          ),
+                          trailing: const Icon(
+                            Icons.arrow_forward_ios_rounded,
+                            size: 14,
+                            color: Color(0xFF94A3B8),
+                          ),
+                          onTap: () async {
+                            final uri = Uri.parse('https://policies.google.com/privacy');
+                            if (await canLaunchUrl(uri)) launchUrl(uri);
+                          },
+                        ),
+                        Divider(color: Colors.black.withOpacity(0.06), height: 1),
+                        ListTile(
+                          contentPadding: EdgeInsets.zero,
+                          leading: Icon(
+                            Icons.star_outline_rounded,
+                            color: AppColors.headingText(context),
+                            size: 20,
+                          ),
+                          title: Text(
+                            'Rate Us',
+                            style: TextStyle(
+                              fontSize: 15.sp,
+                              fontWeight: FontWeight.w600,
+                              color: AppColors.headingText(context),
+                            ),
+                          ),
+                          trailing: const Icon(
+                            Icons.arrow_forward_ios_rounded,
+                            size: 14,
+                            color: Color(0xFF94A3B8),
+                          ),
+                          onTap: () async {
+                            final uri = Uri.parse('https://play.google.com/store/apps/details?id=com.arshadevelop.izivpn');
+                            if (await canLaunchUrl(uri)) launchUrl(uri);
+                          },
+                        ),
+                        Divider(color: Colors.black.withOpacity(0.06), height: 1),
+                        ListTile(
+                          contentPadding: EdgeInsets.zero,
+                          leading: Icon(
+                            Icons.share_outlined,
+                            color: AppColors.headingText(context),
+                            size: 20,
+                          ),
+                          title: Text(
+                            'Share App',
+                            style: TextStyle(
+                              fontSize: 15.sp,
+                              fontWeight: FontWeight.w600,
+                              color: AppColors.headingText(context),
+                            ),
+                          ),
+                          trailing: const Icon(
+                            Icons.arrow_forward_ios_rounded,
+                            size: 14,
+                            color: Color(0xFF94A3B8),
+                          ),
+                          onTap: () {
+                            ShareExtend.share(
+                              'Download izi vpn - Fast & Secure: https://play.google.com/store/apps/details?id=com.arshadevelop.izivpn',
+                              'text',
+                            );
+                          },
+                        ),
+                        Divider(color: Colors.black.withOpacity(0.06), height: 1),
+                        ListTile(
+                          contentPadding: EdgeInsets.zero,
+                          leading: Icon(
+                            Icons.send_rounded,
+                            color: AppColors.brandCoral,
+                            size: 20,
+                          ),
+                          title: Text(
+                            'Telegram Support',
+                            style: TextStyle(
+                              fontSize: 15.sp,
+                              fontWeight: FontWeight.w600,
+                              color: AppColors.headingText(context),
+                            ),
+                          ),
+                          trailing: const Icon(
+                            Icons.arrow_forward_ios_rounded,
+                            size: 14,
+                            color: Color(0xFF94A3B8),
+                          ),
+                          onTap: () async {
+                            final uri = Uri.parse('https://t.me/izivpn_support');
+                            if (await canLaunchUrl(uri)) launchUrl(uri);
+                          },
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
+              ),
+            ),
           ),
-
-          SizedBox(height: 4,),
-
-          ListTile(
-            leading: CircleAvatar(
-                backgroundColor: buttonColor,
-                child: Icon(Icons.star_rate_outlined,color: Colors.white,)),
-            title: Text('Rate Us',style: TextStyle(color:
-            Colors.white,fontSize: 16),),
-            onTap: () async{
-              const youtubeUrl = 'https://play.google.com/';  // Replace with your desired YouTube URL
-              if (await canLaunch(youtubeUrl)) {
-                await launch(youtubeUrl);
-              } else {
-                throw 'Could not launch $youtubeUrl';
-              }
-            },
-          ),
-
-          SizedBox(height: 4,),
-
-          ListTile(
-            leading: CircleAvatar(
-                backgroundColor: buttonColor,
-                child: Icon(Icons.share_outlined,color: Colors.white,)),
-            title: Text('Share',style: TextStyle(color:
-            Colors.white,fontSize: 16),),
-            onTap: () {
-              String textToShare = 'https://play.google.com/store/games';  // Replace with the text you want to share
-              ShareExtend.share(textToShare, 'text');
-            },
-          ),
-
-          SizedBox(height: 4,),
-
-          ListTile(
-            leading: CircleAvatar(
-                backgroundColor: buttonColor,
-                child: Icon(Icons.category_outlined,color: Colors.white,)),
-            title: Text('More Apps',style: TextStyle(color:
-            Colors.white,fontSize: 16),),
-            onTap: () async{
-              const youtubeUrl = 'https://play.google.com/';  // Replace with your desired YouTube URL
-              if (await canLaunch(youtubeUrl)) {
-                await launch(youtubeUrl);
-              } else {
-                throw 'Could not launch $youtubeUrl';
-              }
-            },
-          ),
-
-
-
         ],
       ),
     );
   }
 }
-

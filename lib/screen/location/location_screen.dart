@@ -1,18 +1,13 @@
-import 'dart:convert';
-import 'dart:typed_data';
-
 import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:fluttertoast/fluttertoast.dart';
-import 'package:gamers_shield_vpn/screen/drawer/animated_drawer.dart';
 import 'package:get/get.dart';
 import 'package:google_fonts/google_fonts.dart';
-import 'package:google_mobile_ads/google_mobile_ads.dart';
 import 'package:shared_preferences/shared_preferences.dart';
-
-import '../../ads/ads_service.dart';
 import '../../controller/server_controller.dart';
 import '../../utils/app_colors.dart';
+import '../../widget/circular_flag.dart';
+import '../../widget/frosted_card.dart';
 
 class LocationScreen extends StatefulWidget {
   const LocationScreen({Key? key}) : super(key: key);
@@ -23,482 +18,438 @@ class LocationScreen extends StatefulWidget {
 
 class _LocationScreenState extends State<LocationScreen> {
   final TextEditingController searchCtrl = TextEditingController();
-  bool searchSubmit = false;
-
-  // Function to save server data to SharedPreferences
-  Future<void> saveServerData(dynamic serverName, dynamic config, {bool autoConnect = false}) async {
-    SharedPreferences prefs = await SharedPreferences.getInstance();
-    await prefs.setString('serverName', serverName?.toString() ?? '');
-    await prefs.setString('config', config?.toString() ?? '');
-    if (autoConnect) {
-      await prefs.setBool('autoConnect', true);
-    }
-  }
-
-  late BannerAd _bannerAd;
-  bool _isBannerAdReady = false;
-
-  void _loadBannerAd() {
-    _bannerAd = BannerAd(
-      adUnitId: AdHelper.bannerAdUnitId,
-      request: const AdRequest(),
-      size: AdSize.banner,
-      listener: BannerAdListener(
-        onAdLoaded: (_) {
-          setState(() {
-            _isBannerAdReady = true;
-          });
-        },
-        onAdFailedToLoad: (ad, err) {
-          _isBannerAdReady = false;
-          ad.dispose();
-        },
-      ),
-    );
-
-    _bannerAd.load();
-  }
+  String? _selectedServerId;
 
   @override
   void initState() {
-    _loadBannerAd();
     super.initState();
+    _loadCurrentServer();
+  }
+
+  Future<void> _loadCurrentServer() async {
+    final prefs = await SharedPreferences.getInstance();
+    setState(() {
+      _selectedServerId = prefs.getString('serverId');
+    });
+  }
+
+  Future<void> _selectServer(Map<String, dynamic> server, {bool autoConnect = false}) async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setString('serverId', server['id']?.toString() ?? '');
+    await prefs.setString('serverName', server['serverName']?.toString() ?? 'United States');
+    await prefs.setString('country', server['country']?.toString() ?? 'United States');
+    await prefs.setString('flag', server['flag']?.toString() ?? 'us');
+    await prefs.setString('config', server['config']?.toString() ?? '');
+    if (autoConnect) {
+      await prefs.setBool('autoConnect', true);
+    }
+    Get.back();
   }
 
   @override
   void dispose() {
     searchCtrl.dispose();
-    if (_isBannerAdReady) {
-      _bannerAd.dispose();
-    }
     super.dispose();
   }
 
   Widget _buildPingBadge(int? ping, bool isPinging) {
     if (isPinging) {
       return SizedBox(
-        width: 14.h,
-        height: 14.h,
+        width: 14.w,
+        height: 14.w,
         child: const CircularProgressIndicator(
           strokeWidth: 2,
-          color: Colors.orange,
+          color: AppColors.brandCoral,
         ),
       );
     }
-    if (ping == null) {
-      return Container(
-        padding: EdgeInsets.symmetric(horizontal: 8.w, vertical: 3.h),
-        decoration: BoxDecoration(
-          color: Colors.white10,
-          borderRadius: BorderRadius.circular(12),
-        ),
-        child: Text(
-          "-- ms",
-          style: GoogleFonts.roboto(
-            color: Colors.white54,
-            fontSize: 11.sp,
-            fontWeight: FontWeight.w600,
-          ),
-        ),
-      );
+
+    Color bgColor;
+    Color textColor;
+    String text;
+
+    if (ping == null || ping == 0) {
+      bgColor = const Color(0xFFF1F5F9);
+      textColor = const Color(0xFF64748B);
+      text = "• -- ms";
+    } else if (ping < 0) {
+      bgColor = const Color(0xFFFEE2E2);
+      textColor = AppColors.statusRed;
+      text = "• Timeout";
+    } else if (ping < 120) {
+      bgColor = const Color(0xFFE6F9F0);
+      textColor = AppColors.statusGreen;
+      text = "• $ping ms";
+    } else if (ping <= 280) {
+      bgColor = const Color(0xFFFEF3C7);
+      textColor = AppColors.statusAmber;
+      text = "• $ping ms";
+    } else {
+      bgColor = const Color(0xFFFEE2E2);
+      textColor = AppColors.statusRed;
+      text = "• $ping ms";
     }
-    if (ping < 0) {
-      return Container(
-        padding: EdgeInsets.symmetric(horizontal: 8.w, vertical: 3.h),
-        decoration: BoxDecoration(
-          color: Colors.red.withOpacity(0.2),
-          borderRadius: BorderRadius.circular(12),
-        ),
-        child: Text(
-          "Timeout",
-          style: GoogleFonts.roboto(
-            color: Colors.redAccent,
-            fontSize: 11.sp,
-            fontWeight: FontWeight.w600,
-          ),
-        ),
-      );
-    }
-    Color color = ping < 150
-        ? Colors.greenAccent
-        : (ping < 300 ? Colors.amberAccent : Colors.orangeAccent);
+
     return Container(
-      padding: EdgeInsets.symmetric(horizontal: 8.w, vertical: 3.h),
+      padding: EdgeInsets.symmetric(horizontal: 10.w, vertical: 4.h),
       decoration: BoxDecoration(
-        color: color.withOpacity(0.18),
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: color.withOpacity(0.4), width: 0.8),
+        color: bgColor,
+        borderRadius: BorderRadius.circular(14.r),
       ),
-      child: Row(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Container(
-            width: 6,
-            height: 6,
-            decoration: BoxDecoration(color: color, shape: BoxShape.circle),
-          ),
-          SizedBox(width: 4.w),
-          Text(
-            "$ping ms",
-            style: GoogleFonts.roboto(
-              color: color,
-              fontSize: 11.sp,
-              fontWeight: FontWeight.bold,
-            ),
-          ),
-        ],
+      child: Text(
+        text,
+        style: TextStyle(
+          color: textColor,
+          fontSize: 12.sp,
+          fontWeight: FontWeight.w700,
+        ),
       ),
     );
   }
 
-  Widget _buildServerItem(
-    BuildContext context,
-    ServerController serverController,
-    dynamic server,
-  ) {
-    String id = server['id'] ?? server['serverName'] ?? '';
-    String config = server['config'] ?? '';
-    int? ping = serverController.pingMap[id];
-    bool isThisPinging = serverController.isPinging.value && ping == null;
-
-    return Padding(
-      padding: const EdgeInsets.only(top: 12),
-      child: GestureDetector(
-        onTap: () async {
-          await saveServerData(
-            server["serverName"],
-            server["config"],
-          );
-          Get.offAll(() => AnimatedDrawerScreen());
-        },
-        child: Container(
-          width: double.infinity,
-          decoration: BoxDecoration(
-            color: Colors.white.withOpacity(0.15),
-            borderRadius: BorderRadius.circular(10),
-          ),
-          child: Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
-            child: Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                Expanded(
-                  child: Row(
-                    children: [
-                      if (server['imagePath'] != null &&
-                          server['imagePath'].toString().contains(','))
-                        ClipOval(
-                          child: Image.memory(
-                            Uint8List.fromList(
-                              const Base64Decoder().convert(
-                                server['imagePath']!.split(',').last,
-                              ),
-                            ),
-                            height: 35.h,
-                            width: 35.w,
-                            fit: BoxFit.cover,
-                          ),
-                        )
-                      else
-                        ClipOval(
-                          child: Icon(
-                            Icons.language_rounded,
-                            color: Colors.white70,
-                            size: 32.h,
-                          ),
-                        ),
-                      SizedBox(width: 10.w),
-                      Expanded(
-                        child: Text(
-                          "${server["serverName"] ?? 'Server'}",
-                          style: GoogleFonts.roboto(
-                            color: Colors.white,
-                            fontSize: 15.sp,
-                            fontWeight: FontWeight.w400,
-                          ),
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-                Row(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    InkWell(
-                      onTap: () {
-                        if (config.isNotEmpty && id.isNotEmpty) {
-                          serverController.pingServer(id, config);
-                        }
-                      },
-                      child: _buildPingBadge(ping, isThisPinging),
-                    ),
-                    SizedBox(width: 8.w),
-                    Image.asset(
-                      "assets/images/network.png",
-                      height: 24.h,
-                      width: 24.w,
-                    ),
-                  ],
-                ),
-              ],
-            ),
-          ),
-        ),
-      ),
-    );
+  String _detectProtocol(String config) {
+    if (config.startsWith('trojan://')) return 'TROJAN';
+    return 'VLESS';
   }
 
   @override
   Widget build(BuildContext context) {
-    return GetBuilder<ServerController>(
-      builder: (serverController) {
-        return Scaffold(
-          backgroundColor: AppColors.appBgColor,
-          appBar: AppBar(
-            backgroundColor: AppColors.appBgColor,
-            elevation: 1,
-            automaticallyImplyLeading: false,
-            leading: IconButton(
-              onPressed: () {
-                Get.back();
-              },
-              icon: const Icon(Icons.arrow_back_ios, color: Colors.white),
-            ),
-            title: Text(
-              "VPN Locations",
-              style: GoogleFonts.inika(
-                color: Colors.white,
-                fontSize: 16.sp,
-              ),
-            ),
-            actions: [
-              // Manual Refresh Button
-              IconButton(
-                tooltip: "Update Server List",
-                onPressed: serverController.isLoading
-                    ? null
-                    : () {
-                        serverController.fetchServers(showToastOnResult: true);
-                      },
-                icon: serverController.isLoading
-                    ? SizedBox(
-                        width: 18.h,
-                        height: 18.h,
-                        child: const CircularProgressIndicator(
-                          strokeWidth: 2,
-                          color: Colors.orange,
-                        ),
-                      )
-                    : const Icon(Icons.refresh_rounded, color: Colors.white),
-              ),
+    final serverController = Get.find<ServerController>();
+    final isDark = Theme.of(context).brightness == Brightness.dark;
 
-              // Ping All Button
-              IconButton(
-                tooltip: "Ping All Servers",
-                onPressed: serverController.isPinging.value
-                    ? null
-                    : () {
-                        Fluttertoast.showToast(msg: "Pinging all servers...");
-                        serverController.pingAllServers();
-                      },
-                icon: serverController.isPinging.value
-                    ? SizedBox(
-                        width: 18.h,
-                        height: 18.h,
-                        child: const CircularProgressIndicator(
-                          strokeWidth: 2,
-                          color: Colors.orange,
-                        ),
-                      )
-                    : const Icon(Icons.network_check_rounded, color: Colors.white),
-              ),
-            ],
+    return Scaffold(
+      body: Stack(
+        children: [
+          // Background: Misty atmospheric artwork for inner screens
+          Positioned.fill(
+            child: Image.asset(
+              'assets/images/bg_inner_screens_mist.jpg',
+              fit: BoxFit.cover,
+            ),
           ),
-          resizeToAvoidBottomInset: false,
-          body: Container(
-            width: double.infinity,
-            decoration: const BoxDecoration(
-              image: DecorationImage(
-                image: AssetImage("assets/images/map.png"),
-                fit: BoxFit.cover,
+
+          // Gradient overlay for dark mode adaptation
+          if (isDark)
+            Positioned.fill(
+              child: Container(
+                color: AppColors.obsidianBlack.withOpacity(0.55),
               ),
             ),
-            child: Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 16),
-              child: Column(
-                children: [
-                  SizedBox(height: 12.h),
-                  if (_isBannerAdReady)
-                    Align(
-                      alignment: Alignment.bottomCenter,
-                      child: SizedBox(
-                        width: _bannerAd.size.width.toDouble(),
-                        height: _bannerAd.size.height.toDouble(),
-                        child: AdWidget(ad: _bannerAd),
+
+          SafeArea(
+            child: Column(
+              children: [
+                // 1. Top Header
+                Padding(
+                  padding: EdgeInsets.fromLTRB(16.w, 8.h, 16.w, 12.h),
+                  child: Row(
+                    children: [
+                      // Back Button
+                      GestureDetector(
+                        onTap: () => Get.back(),
+                        child: Container(
+                          width: 40.w,
+                          height: 40.w,
+                          decoration: BoxDecoration(
+                            color: Colors.white.withOpacity(0.2),
+                            shape: BoxShape.circle,
+                          ),
+                          child: const Icon(
+                            Icons.arrow_back_ios_new_rounded,
+                            color: Colors.white,
+                            size: 18,
+                          ),
+                        ),
+                      ),
+                      SizedBox(width: 12.w),
+
+                      // Title
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              'izi vpn',
+                              style: TextStyle(
+                                fontSize: 13.sp,
+                                fontWeight: FontWeight.w500,
+                                color: Colors.white.withOpacity(0.8),
+                              ),
+                            ),
+                            Text(
+                              'Select Location',
+                              style: TextStyle(
+                                fontSize: 24.sp,
+                                fontWeight: FontWeight.w800,
+                                color: Colors.white,
+                                letterSpacing: -0.5,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+
+                      // "Ping All" Coral Button
+                      Obx(() {
+                        final isPinging = serverController.isPinging.value;
+                        return GestureDetector(
+                          onTap: () {
+                            if (!isPinging) {
+                              serverController.pingAllServers();
+                            }
+                          },
+                          child: AnimatedContainer(
+                            duration: const Duration(milliseconds: 250),
+                            padding: EdgeInsets.symmetric(
+                              horizontal: 16.w,
+                              vertical: 10.h,
+                            ),
+                            decoration: BoxDecoration(
+                              color: AppColors.brandCoral,
+                              borderRadius: BorderRadius.circular(22.r),
+                              boxShadow: [
+                                BoxShadow(
+                                  color: AppColors.brandCoral.withOpacity(0.45),
+                                  blurRadius: 12,
+                                  offset: const Offset(0, 4),
+                                ),
+                              ],
+                            ),
+                            child: Row(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                if (isPinging) ...[
+                                  SizedBox(
+                                    width: 12.w,
+                                    height: 12.w,
+                                    child: const CircularProgressIndicator(
+                                      strokeWidth: 2,
+                                      color: Colors.white,
+                                    ),
+                                  ),
+                                  SizedBox(width: 6.w),
+                                ],
+                                Text(
+                                  isPinging ? 'Pinging...' : 'Ping All',
+                                  style: TextStyle(
+                                    fontSize: 13.sp,
+                                    fontWeight: FontWeight.w700,
+                                    color: Colors.white,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                        );
+                      }),
+                    ],
+                  ),
+                ),
+
+                // 2. Search Pill Bar
+                Padding(
+                  padding: EdgeInsets.symmetric(horizontal: 16.w, vertical: 6.h),
+                  child: Container(
+                    height: 48.h,
+                    padding: EdgeInsets.symmetric(horizontal: 16.w),
+                    decoration: BoxDecoration(
+                      color: Colors.white.withOpacity(isDark ? 0.12 : 0.25),
+                      borderRadius: BorderRadius.circular(24.r),
+                      border: Border.all(
+                        color: Colors.white.withOpacity(0.3),
+                        width: 1,
                       ),
                     ),
-                  SizedBox(height: 10.h),
-                  TextFormField(
-                    controller: searchCtrl,
-                    textInputAction: TextInputAction.search,
-                    onChanged: (value) {
-                      setState(() {
-                        searchSubmit = value.isNotEmpty;
-                      });
-                      serverController.searchServers(value);
-                    },
-                    style: GoogleFonts.roboto(color: Colors.white),
-                    decoration: InputDecoration(
-                      contentPadding: EdgeInsets.only(left: 12.r),
-                      prefixIcon: Icon(Icons.search, size: 18.h, color: Colors.white70),
-                      hintText: "Search location...",
-                      hintStyle: GoogleFonts.inter(
-                        fontSize: 14.sp,
-                        fontWeight: FontWeight.w400,
-                        color: Colors.white.withOpacity(0.7),
-                      ),
-                      filled: true,
-                      fillColor: Colors.black.withOpacity(0.2),
-                      border: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(10),
-                        borderSide: BorderSide.none,
-                      ),
-                      focusedBorder: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(10),
-                        borderSide: BorderSide(color: Colors.white.withOpacity(0.6)),
-                      ),
+                    child: Row(
+                      children: [
+                        Icon(
+                          Icons.search_rounded,
+                          color: Colors.white.withOpacity(0.7),
+                          size: 22,
+                        ),
+                        SizedBox(width: 10.w),
+                        Expanded(
+                          child: TextField(
+                            controller: searchCtrl,
+                            onChanged: (v) => serverController.searchServers(v),
+                            style: const TextStyle(color: Colors.white),
+                            cursorColor: AppColors.brandCoral,
+                            decoration: InputDecoration(
+                              hintText: 'Search country or protocol...',
+                              hintStyle: TextStyle(
+                                color: Colors.white.withOpacity(0.6),
+                                fontSize: 14.sp,
+                              ),
+                              border: InputBorder.none,
+                              isDense: true,
+                            ),
+                          ),
+                        ),
+                      ],
                     ),
                   ),
+                ),
 
-                  // Connect to Fastest Server Button
-                  GestureDetector(
+                // 3. Smart Hero Card: "⚡ Connect to Fastest Server"
+                Padding(
+                  padding: EdgeInsets.fromLTRB(16.w, 10.h, 16.w, 12.h),
+                  child: GestureDetector(
                     onTap: () async {
-                      if (serverController.serverData.isEmpty) {
-                        Fluttertoast.showToast(msg: "No servers available");
-                        return;
-                      }
-
-                      // If no pings yet, ping all first
-                      if (serverController.pingMap.isEmpty) {
-                        Fluttertoast.showToast(msg: "Testing latency to find fastest server...");
-                        await serverController.pingAllServers();
-                      }
-
                       var best = serverController.getBestServer();
+                      if (best == null && serverController.serverData.isNotEmpty) {
+                        best = Map<String, dynamic>.from(serverController.serverData.first);
+                      }
                       if (best != null) {
-                        int? delay = serverController.pingMap[best['id'] ?? best['serverName']];
                         Fluttertoast.showToast(
-                          msg: "Connecting to fastest: ${best['serverName']} (${delay ?? 0} ms)",
+                          msg: "Connecting to fastest server: ${best['serverName']}",
                         );
-                        await saveServerData(best['serverName'], best['config'], autoConnect: true);
-                        Get.offAll(() => AnimatedDrawerScreen());
-                      } else {
-                        // If all timed out or no ping, connect to first
-                        var first = serverController.serverData.first;
-                        Fluttertoast.showToast(msg: "Connecting to ${first['serverName']}...");
-                        await saveServerData(first['serverName'], first['config'], autoConnect: true);
-                        Get.offAll(() => AnimatedDrawerScreen());
+                        await _selectServer(best, autoConnect: true);
                       }
                     },
                     child: Container(
-                      margin: EdgeInsets.only(top: 12.h, bottom: 4.h),
-                      padding: EdgeInsets.symmetric(horizontal: 16.w, vertical: 12.h),
+                      height: 56.h,
+                      padding: EdgeInsets.symmetric(horizontal: 20.w),
                       decoration: BoxDecoration(
-                        gradient: const LinearGradient(
-                          colors: [Color(0xffF57D1F), Color(0xffE25C08)],
-                        ),
-                        borderRadius: BorderRadius.circular(12),
+                        color: AppColors.obsidianBlack,
+                        borderRadius: BorderRadius.circular(28.r),
                         boxShadow: [
                           BoxShadow(
-                            color: const Color(0xffF57D1F).withOpacity(0.35),
-                            blurRadius: 8,
-                            offset: const Offset(0, 3),
+                            color: Colors.black.withOpacity(0.3),
+                            blurRadius: 16,
+                            offset: const Offset(0, 6),
                           ),
                         ],
                       ),
                       child: Row(
-                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
                         children: [
-                          Row(
-                            children: [
-                              Icon(Icons.bolt_rounded, color: Colors.white, size: 26.h),
-                              SizedBox(width: 8.w),
-                              Column(
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                children: [
-                                  Text(
-                                    "Connect to Fastest Server",
-                                    style: GoogleFonts.roboto(
-                                      color: Colors.white,
-                                      fontSize: 14.sp,
-                                      fontWeight: FontWeight.bold,
-                                    ),
-                                  ),
-                                  Text(
-                                    "Auto-detects lowest ping",
-                                    style: GoogleFonts.roboto(
-                                      color: Colors.white70,
-                                      fontSize: 11.sp,
-                                    ),
-                                  ),
-                                ],
-                              ),
-                            ],
+                          Icon(
+                            Icons.bolt_rounded,
+                            color: AppColors.brandCoral,
+                            size: 24.sp,
                           ),
-                          Icon(Icons.arrow_forward_ios_rounded, color: Colors.white, size: 16.h),
+                          SizedBox(width: 10.w),
+                          Expanded(
+                            child: Text(
+                              'Connect to Fastest Server',
+                              style: TextStyle(
+                                color: Colors.white,
+                                fontSize: 16.sp,
+                                fontWeight: FontWeight.w800,
+                              ),
+                            ),
+                          ),
+                          Icon(
+                            Icons.arrow_forward_ios_rounded,
+                            color: Colors.white.withOpacity(0.6),
+                            size: 14.sp,
+                          ),
                         ],
                       ),
                     ),
                   ),
+                ),
 
-                  SizedBox(height: 8.h),
-
-                  // Server List with Pull-to-Refresh
-                  Expanded(
-                    child: (searchSubmit
-                                ? serverController.filteredServerData
-                                : serverController.serverData)
-                            .isEmpty
-                        ? Center(
-                            child: serverController.isLoading
-                                ? const CircularProgressIndicator(color: Colors.orange)
-                                : Text(
-                                    "No servers found",
-                                    style: GoogleFonts.roboto(color: Colors.white70),
-                                  ),
-                          )
-                        : RefreshIndicator(
-                            color: Colors.orange,
-                            backgroundColor: AppColors.appBgColor,
-                            onRefresh: () async {
-                              await serverController.fetchServers(showToastOnResult: true);
-                            },
-                            child: ListView.builder(
-                              itemCount: searchSubmit
-                                  ? serverController.filteredServerData.length
-                                  : serverController.serverData.length,
-                              padding: EdgeInsets.only(bottom: 20.h),
-                              itemBuilder: (context, index) {
-                                var list = searchSubmit
-                                    ? serverController.filteredServerData
-                                    : serverController.serverData;
-                                return _buildServerItem(
-                                  context,
-                                  serverController,
-                                  list[index],
-                                );
-                              },
-                            ),
+                // 4. Server List
+                Expanded(
+                  child: GetBuilder<ServerController>(
+                    builder: (controller) {
+                      if (controller.isLoading) {
+                        return const Center(
+                          child: CircularProgressIndicator(
+                            color: AppColors.brandCoral,
                           ),
+                        );
+                      }
+
+                      final servers = controller.filteredServerData;
+                      return RefreshIndicator(
+                        color: AppColors.brandCoral,
+                        onRefresh: () async {
+                          await controller.fetchServers(showToastOnResult: true);
+                        },
+                        child: ListView.separated(
+                          padding: EdgeInsets.fromLTRB(16.w, 4.h, 16.w, 24.h),
+                          itemCount: servers.length,
+                          separatorBuilder: (_, __) => SizedBox(height: 10.h),
+                          itemBuilder: (context, index) {
+                            final server = servers[index] as Map<String, dynamic>;
+                            final id = server['id'] ?? server['serverName'] ?? '';
+                            final name = server['serverName'] ?? 'Unknown Server';
+                            final flag = server['flag'] ?? 'un';
+                            final config = server['config'] ?? '';
+                            final protocol = _detectProtocol(config);
+                            final ping = controller.pingMap[id];
+                            final isPinging = controller.isPinging.value;
+                            final isSelected = id == _selectedServerId;
+
+                            return FrostedCard(
+                              padding: EdgeInsets.symmetric(horizontal: 16.w, vertical: 12.h),
+                              borderRadius: 20.r,
+                              onTap: () => _selectServer(server, autoConnect: true),
+                              child: Row(
+                                children: [
+                                  // Circular Vector Flag in Tactile Ring
+                                  CircularFlagWidget(
+                                    flagCode: flag,
+                                    size: 34.w,
+                                    isSelected: isSelected,
+                                  ),
+                                  SizedBox(width: 14.w),
+
+                                  // Country / Server Name & Protocol
+                                  Expanded(
+                                    child: Column(
+                                      crossAxisAlignment: CrossAxisAlignment.start,
+                                      children: [
+                                        Text(
+                                          name,
+                                          style: TextStyle(
+                                            fontSize: 16.sp,
+                                            fontWeight: FontWeight.w700,
+                                            color: AppColors.headingText(context),
+                                          ),
+                                          maxLines: 1,
+                                          overflow: TextOverflow.ellipsis,
+                                        ),
+                                        SizedBox(height: 4.h),
+                                        Container(
+                                          padding: EdgeInsets.symmetric(
+                                            horizontal: 7.w,
+                                            vertical: 2.h,
+                                          ),
+                                          decoration: BoxDecoration(
+                                            color: const Color(0xFFF1F5F9),
+                                            borderRadius: BorderRadius.circular(6.r),
+                                          ),
+                                          child: Text(
+                                            protocol,
+                                            style: TextStyle(
+                                              fontSize: 10.sp,
+                                              fontWeight: FontWeight.w700,
+                                              color: const Color(0xFF475569),
+                                            ),
+                                          ),
+                                        ),
+                                      ],
+                                    ),
+                                  ),
+
+                                  // Ping Badge
+                                  _buildPingBadge(ping, isPinging),
+                                ],
+                              ),
+                            );
+                          },
+                        ),
+                      );
+                    },
                   ),
-                ],
-              ),
+                ),
+              ],
             ),
           ),
-        );
-      },
+        ],
+      ),
     );
   }
 }
