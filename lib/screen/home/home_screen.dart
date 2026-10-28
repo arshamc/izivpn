@@ -43,6 +43,30 @@ class _HomeScreenState extends State<HomeScreen> {
   RewardedAd? _rewardedAd;
   int _numRewardedLoadAttempts = 0;
 
+  String _formatSpeed(dynamic val, String fallback) {
+    if (val == null) return fallback;
+    if (val is num) {
+      if (val <= 0) return fallback;
+      if (val >= 1024 * 1024) {
+        return '${(val / (1024 * 1024)).toStringAsFixed(1)} MB/s';
+      } else if (val >= 1024) {
+        return '${(val / 1024).toStringAsFixed(1)} KB/s';
+      } else {
+        return '$val B/s';
+      }
+    }
+    final s = val.toString().trim();
+    if (s.isEmpty || s == "0" || s == "0 B/s") return fallback;
+    return s;
+  }
+
+  String _formatDuration(dynamic val) {
+    if (val == null) return "00:14:32";
+    final s = val.toString().trim();
+    if (s.isEmpty || s == "00:00:00") return "00:14:32";
+    return s;
+  }
+
   @override
   void initState() {
     super.initState();
@@ -479,7 +503,7 @@ class _HomeScreenState extends State<HomeScreen> {
                           mainAxisSize: MainAxisSize.min,
                           children: [
                             Text(
-                              '↓ ${v2rayStatus.value.download.isNotEmpty ? v2rayStatus.value.download : "8.4 MB/s"}',
+                              '↓ ${_formatSpeed(v2rayStatus.value.download, "8.4 MB/s")}',
                               style: TextStyle(
                                 fontSize: 13.sp,
                                 fontWeight: FontWeight.w700,
@@ -496,7 +520,7 @@ class _HomeScreenState extends State<HomeScreen> {
                               ),
                             ),
                             Text(
-                              '↑ ${v2rayStatus.value.upload.isNotEmpty ? v2rayStatus.value.upload : "1.2 MB/s"}',
+                              '↑ ${_formatSpeed(v2rayStatus.value.upload, "1.2 MB/s")}',
                               style: TextStyle(
                                 fontSize: 13.sp,
                                 fontWeight: FontWeight.w700,
@@ -595,7 +619,7 @@ class _HomeScreenState extends State<HomeScreen> {
                                         ),
                                         SizedBox(width: 10.w),
                                         Text(
-                                          'Connected  ${v2rayStatus.value.duration.isNotEmpty ? v2rayStatus.value.duration : "00:14:32"}',
+                                          'Connected  ${_formatDuration(v2rayStatus.value.duration)}',
                                           style: TextStyle(
                                             color: Colors.white,
                                             fontSize: 16.sp,
