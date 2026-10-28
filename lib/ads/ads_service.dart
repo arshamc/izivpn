@@ -150,7 +150,7 @@ class AdManager {
 
   // Post-Connection Interstitial with 5s Hard Timeout
   Future<void> showPostConnectionInterstitial({
-    required BuildContext context,
+    BuildContext? context,
     required VoidCallback onComplete,
   }) async {
     if (!await canShowPostConnectionInterstitial()) {
@@ -219,7 +219,7 @@ class AdManager {
 
   // Rewarded VIP Ad with 8s Hard Timeout and Courtesy Pass Fallback
   Future<void> showRewardedVipAd({
-    required BuildContext context,
+    BuildContext? context,
     required Function(bool success, String message) onResult,
   }) async {
     bool earnedReward = false;

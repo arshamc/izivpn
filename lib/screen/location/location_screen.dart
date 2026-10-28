@@ -170,9 +170,8 @@ class _LocationScreenState extends State<LocationScreen> {
                         : () async {
                             setModalState(() => isLoadingAd = true);
                             await AdManager.instance.showRewardedVipAd(
-                              context: bottomSheetContext,
                               onResult: (success, message) async {
-                                if (Navigator.canPop(bottomSheetContext)) {
+                                if (mounted && Navigator.canPop(bottomSheetContext)) {
                                   Navigator.pop(bottomSheetContext);
                                 }
                                 Fluttertoast.showToast(msg: message);

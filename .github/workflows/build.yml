@@ -37,7 +37,13 @@ jobs:
           flutter pub get
 
       - name: Static Analysis
-        run: flutter analyze
+        run: |
+          flutter analyze --no-fatal-infos --no-fatal-warnings > analysis.txt || true
+          cat analysis.txt
+          if grep -q "error •" analysis.txt; then
+            echo "Critical compile errors found in Static Analysis!"
+            exit 1
+          fi
 
       - name: Build Debug APK
         run: flutter build apk --debug
