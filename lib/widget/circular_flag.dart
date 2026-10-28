@@ -135,14 +135,14 @@ class _FlagPainter extends CustomPainter {
     final whiteDiag = Paint()
       ..color = Colors.white
       ..strokeWidth = w * 0.22;
-    canvas.drawLine(Offset(0, 0), Offset(w, h), whiteDiag);
+    canvas.drawLine(const Offset(0, 0), Offset(w, h), whiteDiag);
     canvas.drawLine(Offset(0, h), Offset(w, 0), whiteDiag);
 
     // Red diagonals
     final redDiag = Paint()
       ..color = const Color(0xFFC8102E)
       ..strokeWidth = w * 0.10;
-    canvas.drawLine(Offset(0, 0), Offset(w, h), redDiag);
+    canvas.drawLine(const Offset(0, 0), Offset(w, h), redDiag);
     canvas.drawLine(Offset(0, h), Offset(w, 0), redDiag);
 
     // White cross

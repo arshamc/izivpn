@@ -401,7 +401,7 @@ class _SettingsDrawerContentState extends State<SettingsDrawerContent> {
                         Divider(color: Colors.black.withOpacity(0.06), height: 1),
                         ListTile(
                           contentPadding: EdgeInsets.zero,
-                          leading: Icon(
+                          leading: const Icon(
                             Icons.send_rounded,
                             color: AppColors.brandCoral,
                             size: 20,

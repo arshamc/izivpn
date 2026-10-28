@@ -102,15 +102,22 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
     }
   }
 
-  Future<void> _checkAndRequestPermissions() async {
+  Future<bool> _checkAndRequestPermissions() async {
     try {
       if (Platform.isAndroid) {
-        final granted = await _permChannel.invokeMethod<bool>('checkNotificationPermission');
+        bool? granted = await _permChannel.invokeMethod<bool>('checkNotificationPermission');
         if (granted != true) {
           await _permChannel.invokeMethod<bool>('requestNotificationPermission');
+          for (int i = 0; i < 4; i++) {
+            await Future.delayed(const Duration(milliseconds: 300));
+            granted = await _permChannel.invokeMethod<bool>('checkNotificationPermission');
+            if (granted == true) return true;
+          }
         }
+        return granted ?? true;
       }
     } catch (_) {}
+    return true;
   }
 
   Future<void> loadConfigData() async {
@@ -147,7 +154,14 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
     if (_config != null && _config!.trim().isNotEmpty) {
       if (v2rayStatus.value.state == "DISCONNECTED") {
         try {
-          await _checkAndRequestPermissions();
+          final hasPerm = await _checkAndRequestPermissions();
+          if (!hasPerm) {
+            Fluttertoast.showToast(
+              msg: "Notification permission is required for VPN service",
+              toastLength: Toast.LENGTH_LONG,
+            );
+            return;
+          }
           final cleanConfig = ServerController.sanitizeConfig(_config!);
           V2RayURL parser = FlutterV2ray.parseFromURL(cleanConfig);
           final fullConfig = parser.getFullConfiguration();

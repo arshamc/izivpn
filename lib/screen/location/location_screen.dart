@@ -468,8 +468,8 @@ class _LocationScreenState extends State<LocationScreen> {
                                   color: AppColors.brandCoral.withOpacity(0.45),
                                   blurRadius: 12,
                                   offset: const Offset(0, 4),
-                                ],
-                              ),
+                                ),
+                              ],
                             ),
                             child: Row(
                               mainAxisSize: MainAxisSize.min,

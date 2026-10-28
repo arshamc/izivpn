@@ -37,9 +37,9 @@ jobs:
           flutter pub get
 
       - name: Static Analysis
+        shell: bash -eo pipefail {0}
         run: |
-          flutter analyze > analysis.txt 2>&1 || true
-          cat analysis.txt
+          flutter analyze --no-fatal-infos 2>&1 | tee analysis.txt
 
       - name: Upload Analysis Report
         if: always()
