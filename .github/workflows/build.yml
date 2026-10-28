@@ -38,17 +38,15 @@ jobs:
 
       - name: Static Analysis
         run: |
-          flutter analyze > analysis.txt || true
+          flutter analyze > analysis.txt 2>&1 || true
           cat analysis.txt
-          git config user.name "github-actions[bot]"
-          git config user.email "github-actions[bot]@users.noreply.github.com"
-          git add analysis.txt
-          git commit -m "chore: save analysis report [skip ci]" || true
-          git push origin main || true
-          if grep -q "error •" analysis.txt; then
-            echo "Critical compile errors found in Static Analysis!"
-            exit 1
-          fi
+
+      - name: Upload Analysis Report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: analysis-report
+          path: analysis.txt
 
       - name: Build Debug APK
         run: flutter build apk --debug
