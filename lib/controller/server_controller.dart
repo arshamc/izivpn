@@ -5,6 +5,7 @@ import 'package:fluttertoast/fluttertoast.dart';
 import 'package:get/get.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import '../ads/ads_service.dart';
 import '../utils/default_servers.dart';
 
 class ServerController extends GetxController {
@@ -19,7 +20,7 @@ class ServerController extends GetxController {
   late final FlutterV2ray _v2ray = FlutterV2ray(onStatusChanged: (status) {});
   bool _isV2rayInitialized = false;
 
-  // Censorship-resistant endpoints & Live Dashboard API (tried sequentially)
+  // Censorship-resistant server list endpoints
   final List<String> _serverEndpoints = [
     // 0. Live Admin Dashboard Tunnel (Active from developer's machine)
     'https://vast-peas-beam.loca.lt/api/v1/servers',
@@ -35,6 +36,31 @@ class ServerController extends GetxController {
     // 5. Raw GitHub mirror
     'https://raw.githubusercontent.com/arshamc/izivpn/main/servers.json',
   ];
+
+  // Remote config endpoints (AdMob, maintenance, announcements)
+  final List<String> _configEndpoints = [
+    'https://vast-peas-beam.loca.lt/api/v1/config',
+    'http://10.0.2.2:3000/api/v1/config',
+    'http://localhost:3000/api/v1/config',
+    'https://cdn.jsdelivr.net/gh/arshamc/izivpn@main/app_config.json',
+    'https://fastly.jsdelivr.net/gh/arshamc/izivpn@main/app_config.json',
+    'https://raw.githubusercontent.com/arshamc/izivpn/main/app_config.json',
+  ];
+
+  // Config URL sanitizer (fixes percent-encoded base64 padding in Shadowsocks and whitespace)
+  static String sanitizeConfig(String url) {
+    var trimmed = url.trim();
+    if (trimmed.startsWith('ss://')) {
+      final atIndex = trimmed.lastIndexOf('@');
+      if (atIndex > 5) {
+        final userInfoPart = trimmed.substring(5, atIndex);
+        final rest = trimmed.substring(atIndex);
+        final cleanedUserInfo = Uri.decodeComponent(userInfoPart).replaceAll('%3D', '=');
+        return 'ss://$cleanedUserInfo$rest';
+      }
+    }
+    return trimmed;
+  }
 
   Future<void> _ensureInit() async {
     if (!_isV2rayInitialized) {
@@ -77,7 +103,6 @@ class ServerController extends GetxController {
     try {
       client = HttpClient();
       client.connectionTimeout = timeout;
-      // Allow connection even on filtered/re-routed networks with self-signed proxies
       client.badCertificateCallback = (cert, host, port) => true;
 
       HttpClientRequest request = await client.getUrl(Uri.parse(url)).timeout(timeout);
@@ -98,22 +123,40 @@ class ServerController extends GetxController {
     return null;
   }
 
+  // Fetch Remote Config (AdMob policies & App settings)
+  Future<void> fetchRemoteConfig() async {
+    for (String endpoint in _configEndpoints) {
+      String? body = await _fetchFromHttp(endpoint);
+      if (body != null && body.isNotEmpty) {
+        try {
+          dynamic parsed = jsonDecode(body.trim());
+          if (parsed is Map) {
+            final admobMap = parsed['admob'];
+            if (admobMap is Map) {
+              AdConfig.updateFromMap(Map<String, dynamic>.from(admobMap));
+            }
+            break;
+          }
+        } catch (e) {
+          print('Error applying remote config: $e');
+        }
+      }
+    }
+  }
+
   // Parse server JSON or Base64-encoded JSON (to bypass DPI keyword filters)
   List<dynamic>? _parseServerResponse(String rawBody) {
     try {
       String trimmed = rawBody.trim();
-      // If response is Base64 encoded, decode it first
       if (!trimmed.startsWith('[') && !trimmed.startsWith('{')) {
         try {
           trimmed = utf8.decode(base64.decode(trimmed));
         } catch (_) {}
       }
       dynamic parsed = jsonDecode(trimmed);
-      // Handle both { success: true, data: [...] } format from dashboard & direct List [...]
       if (parsed is Map && parsed['data'] is List) {
         final list = (parsed['data'] as List).map((s) {
           if (s is Map) {
-            // Map countryCode to flag if missing
             if (s['flag'] == null && s['countryCode'] != null) {
               s['flag'] = s['countryCode'];
             }
@@ -131,12 +174,6 @@ class ServerController extends GetxController {
     return null;
   }
 
-  // Multi-Source Fetch with Automatic Fallback:
-  // 1. CDN mirrors (jsDelivr / Fastly / GCore)
-  // 2. GitHub Raw
-  // 3. Firebase Firestore (if unblocked)
-  // 4. Local SharedPreferences Cache
-  // 5. Bundled default servers
   Future<void> fetchServers({bool showToastOnResult = false}) async {
     isLoading = true;
     update();
@@ -194,7 +231,6 @@ class ServerController extends GetxController {
         Fluttertoast.showToast(msg: "Updated ${freshList.length} servers ($sourceUsed)");
       }
     } else {
-      // Step 4: Ensure fallback is populated if serverData is somehow empty
       if (serverData.isEmpty) {
         await loadCachedOrFallbackServers();
       }
@@ -207,14 +243,21 @@ class ServerController extends GetxController {
     update();
   }
 
-  // Ping a single server
+  // Ping a single server using official Google connectivity check URL
   Future<int> pingServer(String id, String configUrl) async {
     try {
       await _ensureInit();
-      V2RayURL parser = FlutterV2ray.parseFromURL(configUrl);
+      final cleanUrl = sanitizeConfig(configUrl);
+      V2RayURL parser = FlutterV2ray.parseFromURL(cleanUrl);
+      final fullConfig = parser.getFullConfiguration();
+      if (fullConfig.isEmpty) {
+        pingMap[id] = -1;
+        update();
+        return -1;
+      }
       int delay = await _v2ray.getServerDelay(
-        config: parser.getFullConfiguration(),
-        url: 'https://cp.cloudflare.com/generate_204',
+        config: fullConfig,
+        url: 'http://www.gstatic.com/generate_204',
       );
       pingMap[id] = delay;
       update();
@@ -227,19 +270,27 @@ class ServerController extends GetxController {
     }
   }
 
-  // Ping all servers sequentially
+  // Ping all servers with high-speed parallel batching (4 concurrent connections)
   Future<void> pingAllServers() async {
     if (isPinging.value) return;
     isPinging.value = true;
     update();
 
     try {
-      for (var server in serverData) {
-        String id = server['id'] ?? server['serverName'] ?? '';
-        String config = server['config'] ?? '';
-        if (config.isNotEmpty && id.isNotEmpty) {
-          await pingServer(id, config);
-        }
+      final validServers = serverData.where((s) {
+        final id = (s['id'] ?? s['serverName'] ?? '').toString();
+        final config = (s['config'] ?? '').toString();
+        return id.isNotEmpty && config.isNotEmpty;
+      }).toList();
+
+      const batchSize = 4;
+      for (int i = 0; i < validServers.length; i += batchSize) {
+        final batch = validServers.skip(i).take(batchSize).toList();
+        await Future.wait(batch.map((server) {
+          final id = (server['id'] ?? server['serverName'] ?? '').toString();
+          final config = (server['config'] ?? '').toString();
+          return pingServer(id, config);
+        }));
       }
     } finally {
       isPinging.value = false;
@@ -253,7 +304,7 @@ class ServerController extends GetxController {
     int lowestDelay = 999999;
 
     for (var server in serverData) {
-      String id = server['id'] ?? server['serverName'] ?? '';
+      String id = (server['id'] ?? server['serverName'] ?? '').toString();
       int? delay = pingMap[id];
       if (delay != null && delay > 0 && delay < lowestDelay) {
         lowestDelay = delay;
@@ -279,10 +330,9 @@ class ServerController extends GetxController {
 
   @override
   void onInit() {
-    // 1. Immediately load cache or default servers without blocking UI
     loadCachedOrFallbackServers();
-    // 2. In background, attempt multi-source fetch
     fetchServers();
+    fetchRemoteConfig();
     super.onInit();
   }
 }

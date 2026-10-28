@@ -7,6 +7,9 @@ on:
     branches: [ main, master ]
   workflow_dispatch:
 
+permissions:
+  contents: write
+
 jobs:
   build:
     name: Build Android APK
@@ -33,6 +36,9 @@ jobs:
           flutter pub upgrade flutter_v2ray
           flutter pub get
 
+      - name: Static Analysis
+        run: flutter analyze
+
       - name: Build Debug APK
         run: flutter build apk --debug
 
@@ -52,3 +58,21 @@ jobs:
           name: izi-vpn-release-apk
           path: build/app/outputs/flutter-apk/app-release.apk
           retention-days: 7
+
+      - name: Create or Update GitHub Release
+        if: github.ref == 'refs/heads/main' && github.event_name == 'push'
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: v2.0.0-preview
+          name: "izi vpn v2.0.0-preview (Release Candidate)"
+          body: |
+            ## 🚀 izi vpn v2.0.0-preview
+
+            ### Key Updates:
+            - **Android 14 & Xiaomi Compatibility**: Isolated native `:RunSoLibV2RayDaemon` process and automatic notification permissions preventing foreground service timeouts.
+            - **Fast Parallel Ping Engine**: Multi-threaded pinging via official Google network endpoint (`gstatic.com/generate_204`).
+            - **AdMob Anti-Ban State Machine**: Official Google Test IDs active, post-connection milestone interstitial with 5-second hard timeout, app lifecycle guard, and 2-Hour VIP Pass via Rewarded Ads.
+            - **Multi-Source Config Sync**: 20 global servers synced with fallback mirrors.
+          files: |
+            build/app/outputs/flutter-apk/app-release.apk
+            build/app/outputs/flutter-apk/app-debug.apk

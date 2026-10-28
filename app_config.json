@@ -1,0 +1,74 @@
+{
+  "admob": {
+    "enabled": false,
+    "isTestMode": true,
+    "interstitialCap24h": 2,
+    "interstitialCooldownMin": 180,
+    "jitterMinMs": 800,
+    "jitterMaxMs": 2000,
+    "interstitialTimeoutSec": 5,
+    "rewardedVipDurationHours": 2,
+    "rewardedTimeoutSec": 8,
+    "courtesyPassMin": 30,
+    "testAdUnitInterstitial": "ca-app-pub-3940256099942544/1033173712",
+    "testAdUnitRewarded": "ca-app-pub-3940256099942544/5224354917",
+    "prodAdUnitInterstitial": "",
+    "prodAdUnitRewarded": ""
+  },
+  "appConfig": {
+    "googleReviewSafeMode": false,
+    "maintenanceMode": false,
+    "maintenanceTitle": "🔧 بهینه‌سازی زیرساخت",
+    "maintenanceMessage": "سرورها موقتاً جهت اعمال تنظیمات شبکه در دسترس نیستند. به زودی برمی‌گردیم.",
+    "minVersion": "2.0.0",
+    "latestVersion": "2.0.0",
+    "forceUpdate": false,
+    "updateUrl": "https://github.com/arshamc/izivpn/releases",
+    "updateMessage": "نسخه جدید izi vpn با سرعت پایدارتر و تونل‌های قدرتمند آماده شد. لطفاً اپلیکیشن را ارتقا دهید.",
+    "privacyPolicyUrl": "https://policies.google.com/privacy",
+    "telegramSupportUrl": "https://t.me/izivpn_support",
+    "telegramChannelUrl": "https://t.me/izivpn_official"
+  },
+  "announcements": [
+    {
+      "id": "notif-mvsbrnsr",
+      "title": "تستر",
+      "message": "نسنر",
+      "urgency": "urgent",
+      "actionUrl": "",
+      "targetVersion": "*",
+      "isActive": true,
+      "createdAt": "2026-10-28T16:24:41.787Z"
+    },
+    {
+      "id": "notif-mvsbrb42",
+      "title": "تستر",
+      "message": "نستر",
+      "urgency": "info",
+      "actionUrl": "",
+      "targetVersion": "*",
+      "isActive": true,
+      "createdAt": "2026-10-28T16:24:25.346Z"
+    },
+    {
+      "id": "notif-mvsbq3en",
+      "title": "تستذ",
+      "message": "تستسس",
+      "urgency": "info",
+      "actionUrl": "",
+      "targetVersion": "*",
+      "isActive": true,
+      "createdAt": "2026-10-28T16:23:28.703Z"
+    },
+    {
+      "id": "notif-01",
+      "title": "⚡ سرورهای پرسرعت گلوبال فعال شدند",
+      "message": "استخر سرورهای جدید جهانی بدون افت سرعت در دسترس قرار گرفت. در صورت اختلال، موقعیت را روی Global تنظیم کنید.",
+      "urgency": "info",
+      "actionUrl": "",
+      "targetVersion": "*",
+      "isActive": true,
+      "createdAt": "2026-10-28T14:00:00.000Z"
+    }
+  ]
+}

@@ -1,10 +1,11 @@
 import 'dart:async';
+import 'dart:io';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:flutter_v2ray/flutter_v2ray.dart';
 import 'package:fluttertoast/fluttertoast.dart';
 import 'package:get/get.dart';
-import 'package:google_mobile_ads/google_mobile_ads.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../../ads/ads_service.dart';
 import '../../controller/server_controller.dart';
@@ -25,7 +26,7 @@ class HomeScreen extends StatefulWidget {
   State<HomeScreen> createState() => _HomeScreenState();
 }
 
-class _HomeScreenState extends State<HomeScreen> {
+class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
   String? _serverName = "United States";
   String? _country = "United States";
   String? _flag = "us";
@@ -34,14 +35,19 @@ class _HomeScreenState extends State<HomeScreen> {
 
   late final FlutterV2ray flutterV2ray = FlutterV2ray(
     onStatusChanged: (status) {
+      final oldState = v2rayStatus.value.state;
       v2rayStatus.value = status;
       if (mounted) setState(() {});
+
+      if (oldState == "CONNECTING" && status.state == "CONNECTED") {
+        _handlePostConnectionAdFlow();
+      }
     },
   );
 
   var v2rayStatus = ValueNotifier<V2RayStatus>(V2RayStatus());
-  RewardedAd? _rewardedAd;
-  int _numRewardedLoadAttempts = 0;
+  bool _isFinalizingTunnel = false;
+  static const MethodChannel _permChannel = MethodChannel('com.arshadevelop.izivpn/permissions');
 
   String _formatSpeed(dynamic val, String fallback) {
     if (val == null) return fallback;
@@ -70,13 +76,42 @@ class _HomeScreenState extends State<HomeScreen> {
   @override
   void initState() {
     super.initState();
-    _createRewardedAd();
+    WidgetsBinding.instance.addObserver(this);
     WidgetsBinding.instance.addPostFrameCallback((_) {
       loadConfigData();
+      _checkAndRequestPermissions();
       flutterV2ray.initializeV2Ray().then((_) {
         if (mounted) setState(() {});
       });
     });
+  }
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    AdManager.instance.setAppLifecycleState(state);
+    if (state == AppLifecycleState.paused ||
+        state == AppLifecycleState.inactive ||
+        state == AppLifecycleState.hidden) {
+      if (_isFinalizingTunnel || v2rayStatus.value.state == "CONNECTING") {
+        flutterV2ray.stopV2Ray();
+        if (mounted) {
+          setState(() {
+            _isFinalizingTunnel = false;
+          });
+        }
+      }
+    }
+  }
+
+  Future<void> _checkAndRequestPermissions() async {
+    try {
+      if (Platform.isAndroid) {
+        final granted = await _permChannel.invokeMethod<bool>('checkNotificationPermission');
+        if (granted != true) {
+          await _permChannel.invokeMethod<bool>('requestNotificationPermission');
+        }
+      }
+    } catch (_) {}
   }
 
   Future<void> loadConfigData() async {
@@ -88,7 +123,6 @@ class _HomeScreenState extends State<HomeScreen> {
       _config = prefs.getString('config');
     });
 
-    // Pick first default server if none selected
     if (_config == null || _config!.isEmpty) {
       final serverController = Get.find<ServerController>();
       if (serverController.serverData.isNotEmpty) {
@@ -114,7 +148,9 @@ class _HomeScreenState extends State<HomeScreen> {
     if (_config != null && _config!.trim().isNotEmpty) {
       if (v2rayStatus.value.state == "DISCONNECTED") {
         try {
-          V2RayURL parser = FlutterV2ray.parseFromURL(_config!);
+          await _checkAndRequestPermissions();
+          final cleanConfig = ServerController.sanitizeConfig(_config!);
+          V2RayURL parser = FlutterV2ray.parseFromURL(cleanConfig);
           final fullConfig = parser.getFullConfiguration();
           if (fullConfig.isEmpty) {
             Fluttertoast.showToast(msg: "Configuration error: Empty config");
@@ -138,51 +174,35 @@ class _HomeScreenState extends State<HomeScreen> {
     }
   }
 
-  void _createRewardedAd() {
-    RewardedAd.load(
-      adUnitId: AdHelper.rewardedAdUnitId,
-      request: const AdRequest(),
-      rewardedAdLoadCallback: RewardedAdLoadCallback(
-        onAdLoaded: (ad) {
-          _rewardedAd = ad;
-          _numRewardedLoadAttempts = 0;
-        },
-        onAdFailedToLoad: (error) {
-          _rewardedAd = null;
-          _numRewardedLoadAttempts += 1;
-          if (_numRewardedLoadAttempts < 3) {
-            _createRewardedAd();
-          }
-        },
-      ),
-    );
-  }
+  Future<void> _handlePostConnectionAdFlow() async {
+    setState(() {
+      _isFinalizingTunnel = true;
+    });
 
-  void _showRewardedAd() {
-    if (_rewardedAd == null) return;
-    _rewardedAd!.fullScreenContentCallback = FullScreenContentCallback(
-      onAdDismissedFullScreenContent: (ad) {
-        ad.dispose();
-        _createRewardedAd();
-      },
-      onAdFailedToShowFullScreenContent: (ad, error) {
-        ad.dispose();
-        _createRewardedAd();
+    // 500ms delay over established VPN tunnel for network routing stability
+    await Future.delayed(const Duration(milliseconds: 500));
+    if (!mounted) return;
+
+    await AdManager.instance.showPostConnectionInterstitial(
+      context: context,
+      onComplete: () {
+        if (mounted) {
+          setState(() {
+            _isFinalizingTunnel = false;
+          });
+        }
       },
     );
-    _rewardedAd!.setImmersiveMode(true);
-    _rewardedAd!.show(onUserEarnedReward: (_, __) {});
-    _rewardedAd = null;
   }
 
   @override
   void dispose() {
-    _rewardedAd?.dispose();
+    WidgetsBinding.instance.removeObserver(this);
     super.dispose();
   }
 
   String _getBackgroundForState(String state, String? country) {
-    if (state == "CONNECTING") {
+    if (state == "CONNECTING" || _isFinalizingTunnel) {
       return 'assets/images/bg_connecting_flight.jpg';
     }
     if (state == "CONNECTED") {
@@ -212,6 +232,7 @@ class _HomeScreenState extends State<HomeScreen> {
 
   String _detectProtocol(String? cfg) {
     if (cfg != null && cfg.startsWith('trojan://')) return 'Trojan';
+    if (cfg != null && cfg.startsWith('ss://')) return 'Shadowsocks';
     return 'VLESS';
   }
 
@@ -219,8 +240,8 @@ class _HomeScreenState extends State<HomeScreen> {
   Widget build(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
     final state = v2rayStatus.value.state;
-    final isConnected = state == "CONNECTED";
-    final isConnecting = state == "CONNECTING";
+    final isConnected = state == "CONNECTED" && !_isFinalizingTunnel;
+    final isConnecting = state == "CONNECTING" || _isFinalizingTunnel;
     final bgAsset = _getBackgroundForState(state, _country);
 
     final screenH = MediaQuery.of(context).size.height;
@@ -285,109 +306,76 @@ class _HomeScreenState extends State<HomeScreen> {
                 child: Padding(
                   padding: EdgeInsets.symmetric(horizontal: 16.w, vertical: 8.h),
                   child: Row(
-                children: [
-                  // Hamburger Menu Button
-                  GestureDetector(
-                    onTap: () {
-                      zoomDrawerController.toggle?.call();
-                    },
-                    child: Container(
-                      width: 44.w,
-                      height: 44.w,
-                      decoration: BoxDecoration(
-                        color: Colors.black.withOpacity(0.2),
-                        shape: BoxShape.circle,
-                        border: Border.all(
-                          color: Colors.white.withOpacity(0.4),
-                          width: 1.2,
-                        ),
-                      ),
-                      child: const Icon(
-                        Icons.menu_rounded,
-                        color: Colors.white,
-                        size: 22,
-                      ),
-                    ),
-                  ),
-
-                  // Center Brand Logo & Title
-                  Expanded(
-                    child: Row(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children: [
-                        Container(
-                          width: 26.w,
-                          height: 26.w,
-                          decoration: const BoxDecoration(
+                    children: [
+                      // Hamburger Menu Button
+                      GestureDetector(
+                        onTap: () {
+                          zoomDrawerController.toggle?.call();
+                        },
+                        child: Container(
+                          width: 44.w,
+                          height: 44.w,
+                          decoration: BoxDecoration(
+                            color: Colors.black.withOpacity(0.2),
                             shape: BoxShape.circle,
-                            color: AppColors.brandCoral,
+                            border: Border.all(
+                              color: Colors.white.withOpacity(0.4),
+                              width: 1.2,
+                            ),
                           ),
                           child: const Icon(
-                            Icons.bolt_rounded,
+                            Icons.menu_rounded,
                             color: Colors.white,
-                            size: 16,
+                            size: 22,
                           ),
                         ),
-                        SizedBox(width: 8.w),
-                        Text(
-                          'izi vpn',
-                          style: TextStyle(
-                            fontSize: 18.sp,
-                            fontWeight: FontWeight.w800,
-                            color: Colors.white,
-                            letterSpacing: -0.3,
-                            shadows: [
-                              Shadow(
-                                color: Colors.black.withOpacity(0.4),
-                                blurRadius: 6,
-                                offset: const Offset(0, 2),
+                      ),
+
+                      // Center Brand Logo & Title
+                      Expanded(
+                        child: Row(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: [
+                            Container(
+                              width: 26.w,
+                              height: 26.w,
+                              decoration: const BoxDecoration(
+                                shape: BoxShape.circle,
+                                color: AppColors.brandCoral,
                               ),
-                            ],
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-
-                  // Speed Test Quick Action
-                  GestureDetector(
-                    onTap: () {
-                      Get.to(
-                        () => const SpeedTestScreen(),
-                        transition: Transition.rightToLeft,
-                      );
-                    },
-                    child: Container(
-                      width: 44.w,
-                      height: 44.w,
-                      decoration: BoxDecoration(
-                        color: Colors.black.withOpacity(0.2),
-                        shape: BoxShape.circle,
-                        border: Border.all(
-                          color: Colors.white.withOpacity(0.4),
-                          width: 1.2,
+                              child: const Icon(
+                                Icons.bolt_rounded,
+                                color: Colors.white,
+                                size: 16,
+                              ),
+                            ),
+                            SizedBox(width: 8.w),
+                            Text(
+                              'izi vpn',
+                              style: TextStyle(
+                                fontSize: 18.sp,
+                                fontWeight: FontWeight.w800,
+                                color: Colors.white,
+                                letterSpacing: -0.3,
+                                shadows: [
+                                  Shadow(
+                                    color: Colors.black.withOpacity(0.4),
+                                    blurRadius: 6,
+                                    offset: const Offset(0, 2),
+                                  ),
+                                ],
+                              ),
+                            ),
+                          ],
                         ),
                       ),
-                      child: const Icon(
-                        Icons.speed_rounded,
-                        color: Colors.white,
-                        size: 22,
-                      ),
-                    ),
-                  ),
-                  SizedBox(width: 8.w),
 
-                  // Notification Bell with Coral Unread Dot
-                  GestureDetector(
-                    onTap: () {
-                      Get.to(
-                        () => const NotificationScreen(),
-                        transition: Transition.rightToLeft,
-                      );
-                    },
-                    child: Stack(
-                      children: [
-                        Container(
+                      // Notification Icon
+                      GestureDetector(
+                        onTap: () {
+                          Get.to(() => const NotificationScreen());
+                        },
+                        child: Container(
                           width: 44.w,
                           height: 44.w,
                           decoration: BoxDecoration(
@@ -404,290 +392,386 @@ class _HomeScreenState extends State<HomeScreen> {
                             size: 22,
                           ),
                         ),
-                        Positioned(
-                          top: 10,
-                          right: 10,
-                          child: Container(
-                            width: 8.w,
-                            height: 8.w,
-                            decoration: const BoxDecoration(
-                              color: AppColors.brandCoral,
-                              shape: BoxShape.circle,
+                      ),
+                      SizedBox(width: 8.w),
+
+                      // Speed Test Action
+                      GestureDetector(
+                        onTap: () {
+                          Get.to(() => const SpeedTestScreen());
+                        },
+                        child: Container(
+                          width: 44.w,
+                          height: 44.w,
+                          decoration: BoxDecoration(
+                            color: Colors.black.withOpacity(0.2),
+                            shape: BoxShape.circle,
+                            border: Border.all(
+                              color: Colors.white.withOpacity(0.4),
+                              width: 1.2,
                             ),
+                          ),
+                          child: const Icon(
+                            Icons.speed_rounded,
+                            color: Colors.white,
+                            size: 20,
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            ),
+
+            // 4. Middle Flight Status Indicator (When Connecting or Finalizing)
+            if (isConnecting)
+              Positioned(
+                top: 140.h,
+                left: 0,
+                right: 0,
+                child: Center(
+                  child: Container(
+                    padding: EdgeInsets.symmetric(horizontal: 18.w, vertical: 8.h),
+                    decoration: BoxDecoration(
+                      color: Colors.black.withOpacity(0.45),
+                      borderRadius: BorderRadius.circular(24.r),
+                      border: Border.all(
+                        color: Colors.white.withOpacity(0.25),
+                        width: 1,
+                      ),
+                    ),
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        SizedBox(
+                          width: 14.w,
+                          height: 14.w,
+                          child: const CircularProgressIndicator(
+                            strokeWidth: 2,
+                            color: AppColors.brandCoral,
+                          ),
+                        ),
+                        SizedBox(width: 10.w),
+                        Text(
+                          _isFinalizingTunnel
+                              ? 'Finalizing Secure Tunnel...'
+                              : 'Establishing Xray Tunnel...',
+                          style: TextStyle(
+                            fontSize: 13.sp,
+                            fontWeight: FontWeight.w700,
+                            color: Colors.white,
                           ),
                         ),
                       ],
                     ),
                   ),
-                ],
+                ),
               ),
-            ),
-          ),
-        ),
 
-          // 4. Bottom Foreground Section with Coral Wave & White Fog
-          Positioned(
-            left: 0,
-            right: 0,
-            bottom: 0,
-            child: CoralWaveWidget(
+            // 5. Pinned Bottom White Card (Clamped to ~49% of Viewport)
+            Positioned(
+              left: 0,
+              right: 0,
+              bottom: 0,
               height: bottomCardHeight,
-              child: Padding(
-                padding: EdgeInsets.symmetric(horizontal: 20.w),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.center,
+              child: Container(
+                decoration: BoxDecoration(
+                  color: isDark ? const Color(0xFF1E2430) : Colors.white,
+                  borderRadius: BorderRadius.only(
+                    topLeft: Radius.circular(32.r),
+                    topRight: Radius.circular(32.r),
+                  ),
+                  boxShadow: [
+                    BoxShadow(
+                      color: Colors.black.withOpacity(0.18),
+                      blurRadius: 30,
+                      offset: const Offset(0, -6),
+                    ),
+                  ],
+                ),
+                child: Stack(
+                  clipBehavior: Clip.none,
                   children: [
-                    // Squircle Flag Badge (Tapping opens Location Screen)
-                    GestureDetector(
-                      onTap: () {
-                        Get.to(() => const LocationScreen())?.then((_) => loadConfigData());
-                      },
-                      child: Container(
-                        width: 68.w,
-                        height: 68.w,
-                        decoration: BoxDecoration(
-                          color: Colors.white,
-                          borderRadius: BorderRadius.circular(20.r),
-                          border: Border.all(
-                            color: isConnected ? AppColors.brandCoral : const Color(0xFFE2E8F0),
-                            width: 2,
-                          ),
-                          boxShadow: [
-                            BoxShadow(
-                              color: isConnected
-                                  ? AppColors.brandCoral.withOpacity(0.35)
-                                  : Colors.black.withOpacity(0.08),
-                              blurRadius: 18,
-                              offset: const Offset(0, 6),
-                            ),
-                          ],
+                    // Organic Wave Texture
+                    Positioned(
+                      top: 0,
+                      left: 0,
+                      right: 0,
+                      child: ClipRRect(
+                        borderRadius: BorderRadius.only(
+                          topLeft: Radius.circular(32.r),
+                          topRight: Radius.circular(32.r),
                         ),
-                        child: Center(
-                          child: CircularFlagWidget(
-                            flagCode: _flag ?? 'us',
-                            size: 40.w,
-                            showOuterRing: false,
-                          ),
+                        child: SizedBox(
+                          height: 100.h,
+                          child: const CoralWaveWidget(isGlowing: true),
                         ),
                       ),
                     ),
-                    SizedBox(height: 10.h),
 
-                    // Country & Server Name
-                    Text(
-                      isConnected
-                          ? (_country ?? "United States")
-                          : (isConnecting ? "Connecting..." : "Unsecured Network"),
-                      style: TextStyle(
-                        fontSize: 24.sp,
-                        fontWeight: FontWeight.w900,
-                        color: AppColors.headingText(context),
-                        letterSpacing: -0.5,
-                      ),
-                    ),
-                    SizedBox(height: 3.h),
-
-                    // City & Protocol
-                    Text(
-                      isConnected
-                          ? "${_serverName ?? 'New York'} • ${_detectProtocol(_config)}"
-                          : (isConnecting ? "Negotiating Xray Tunnel" : "Exposed Connection"),
-                      style: TextStyle(
-                        fontSize: 14.sp,
-                        fontWeight: FontWeight.w600,
-                        color: AppColors.subtitleText(context),
-                      ),
-                    ),
-                    SizedBox(height: 3.h),
-
-                    // Masked IP line
-                    Text(
-                      isConnected
-                          ? "Your IP : 238.43.22.38"
-                          : "Your IP : $_maskedIp",
-                      style: TextStyle(
-                        fontSize: 12.sp,
-                        fontWeight: FontWeight.w500,
-                        color: AppColors.mutedText(context),
-                        fontFamily: 'monospace',
-                      ),
-                    ),
-                    SizedBox(height: 10.h),
-
-                    // Live Metrics Frosted Pill (Visible when CONNECTED)
-                    AnimatedOpacity(
-                      opacity: isConnected ? 1.0 : 0.0,
-                      duration: const Duration(milliseconds: 300),
-                      child: Container(
-                        padding: EdgeInsets.symmetric(horizontal: 16.w, vertical: 6.h),
-                        decoration: BoxDecoration(
-                          color: const Color(0xFFF1F5F9),
-                          borderRadius: BorderRadius.circular(22.r),
-                          border: Border.all(
-                            color: const Color(0xFFE2E8F0),
-                            width: 1,
-                          ),
-                        ),
-                        child: Row(
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            Text(
-                              '↓ ${_formatSpeed(v2rayStatus.value.download, "8.4 MB/s")}',
-                              style: TextStyle(
-                                fontSize: 13.sp,
-                                fontWeight: FontWeight.w700,
-                                color: AppColors.headingText(context),
-                              ),
-                            ),
-                            Padding(
-                              padding: EdgeInsets.symmetric(horizontal: 10.w),
-                              child: Text(
-                                '|',
-                                style: TextStyle(
-                                  color: Colors.grey.withOpacity(0.5),
-                                ),
-                              ),
-                            ),
-                            Text(
-                              '↑ ${_formatSpeed(v2rayStatus.value.upload, "1.2 MB/s")}',
-                              style: TextStyle(
-                                fontSize: 13.sp,
-                                fontWeight: FontWeight.w700,
-                                color: AppColors.headingText(context),
-                              ),
-                            ),
-                            Padding(
-                              padding: EdgeInsets.symmetric(horizontal: 10.w),
-                              child: Text(
-                                '|',
-                                style: TextStyle(
-                                  color: Colors.grey.withOpacity(0.5),
-                                ),
-                              ),
-                            ),
-                            Icon(
-                              Icons.signal_cellular_alt_rounded,
-                              color: AppColors.statusGreen,
-                              size: 15.sp,
-                            ),
-                            SizedBox(width: 4.w),
-                            Text(
-                              '48 ms',
-                              style: TextStyle(
-                                fontSize: 13.sp,
-                                fontWeight: FontWeight.w700,
-                                color: AppColors.statusGreen,
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
-                    ),
-                    const Spacer(),
-
-                    // Bottom Obsidian Capsule Action Button
-                    GestureDetector(
-                      onTap: () async {
-                        if (isConnected) {
-                          _showRewardedAd();
-                          flutterV2ray.stopV2Ray();
-                        } else if (!isConnecting) {
-                          await _startVpnConnection();
-                        }
-                      },
-                      child: Container(
-                        width: double.infinity,
-                        height: 56.h,
-                        margin: EdgeInsets.only(bottom: 20.h),
-                        decoration: BoxDecoration(
-                          color: AppColors.obsidianBlack,
-                          borderRadius: BorderRadius.circular(28.r),
-                          boxShadow: [
-                            BoxShadow(
-                              color: Colors.black.withOpacity(0.3),
-                              blurRadius: 16,
-                              offset: const Offset(0, 6),
-                            ),
-                          ],
-                        ),
-                        child: Center(
-                          child: isConnecting
-                              ? Row(
-                                  mainAxisAlignment: MainAxisAlignment.center,
-                                  children: [
-                                    SizedBox(
-                                      width: 20.w,
-                                      height: 20.w,
-                                      child: const CircularProgressIndicator(
-                                        strokeWidth: 2.5,
-                                        color: Colors.white,
-                                      ),
-                                    ),
-                                    SizedBox(width: 12.w),
-                                    Text(
-                                      'Connecting...',
-                                      style: TextStyle(
-                                        color: Colors.white,
-                                        fontSize: 16.sp,
-                                        fontWeight: FontWeight.w700,
-                                      ),
+                    // Card Content
+                    Padding(
+                      padding: EdgeInsets.fromLTRB(20.w, 0, 20.w, 12.h),
+                      child: Column(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          // Tactile Overlapping Flag Badge
+                          Transform.translate(
+                            offset: Offset(0, -28.h),
+                            child: GestureDetector(
+                              onTap: () {
+                                Get.to(() => const LocationScreen())?.then((_) => loadConfigData());
+                              },
+                              child: Container(
+                                width: 72.w,
+                                height: 72.w,
+                                decoration: BoxDecoration(
+                                  color: isDark ? const Color(0xFF1E2430) : Colors.white,
+                                  borderRadius: BorderRadius.circular(20.r),
+                                  border: Border.all(
+                                    color: isConnected ? AppColors.brandCoral : const Color(0xFFE2E8F0),
+                                    width: 2,
+                                  ),
+                                  boxShadow: [
+                                    BoxShadow(
+                                      color: isConnected
+                                          ? AppColors.brandCoral.withOpacity(0.35)
+                                          : Colors.black.withOpacity(0.08),
+                                      blurRadius: 18,
+                                      offset: const Offset(0, 6),
                                     ),
                                   ],
-                                )
-                              : isConnected
-                                  ? Row(
-                                      mainAxisAlignment: MainAxisAlignment.center,
-                                      children: [
-                                        Container(
-                                          width: 8.w,
-                                          height: 8.w,
-                                          decoration: const BoxDecoration(
-                                            color: AppColors.statusGreen,
-                                            shape: BoxShape.circle,
-                                          ),
-                                        ),
-                                        SizedBox(width: 10.w),
-                                        Text(
-                                          'Connected  ${_formatDuration(v2rayStatus.value.duration)}',
-                                          style: TextStyle(
-                                            color: Colors.white,
-                                            fontSize: 16.sp,
-                                            fontWeight: FontWeight.w800,
-                                            fontFamily: 'monospace',
-                                          ),
-                                        ),
-                                      ],
-                                    )
-                                  : Row(
-                                      mainAxisAlignment: MainAxisAlignment.center,
-                                      children: [
-                                        const Icon(
-                                          Icons.power_settings_new_rounded,
-                                          color: Colors.white,
-                                          size: 22,
-                                        ),
-                                        SizedBox(width: 8.w),
-                                        Text(
-                                          'Tap to Connect',
-                                          style: TextStyle(
-                                            color: Colors.white,
-                                            fontSize: 16.sp,
-                                            fontWeight: FontWeight.w800,
-                                          ),
-                                        ),
-                                      ],
+                                ),
+                                child: Center(
+                                  child: CircularFlagWidget(
+                                    flagCode: _flag ?? 'us',
+                                    size: 40.w,
+                                    showOuterRing: false,
+                                  ),
+                                ),
+                              ),
+                            ),
+                          ),
+                          SizedBox(height: 4.h),
+
+                          // Country & Server Name
+                          Text(
+                            isConnected
+                                ? (_country ?? "United States")
+                                : (isConnecting ? "Connecting..." : "Unsecured Network"),
+                            style: TextStyle(
+                              fontSize: 24.sp,
+                              fontWeight: FontWeight.w900,
+                              color: AppColors.headingText(context),
+                              letterSpacing: -0.5,
+                            ),
+                          ),
+                          SizedBox(height: 3.h),
+
+                          // City & Protocol
+                          Text(
+                            isConnected
+                                ? "${_serverName ?? 'New York'} • ${_detectProtocol(_config)}"
+                                : (isConnecting ? "Negotiating Xray Tunnel" : "Exposed Connection"),
+                            style: TextStyle(
+                              fontSize: 14.sp,
+                              fontWeight: FontWeight.w600,
+                              color: AppColors.subtitleText(context),
+                            ),
+                          ),
+                          SizedBox(height: 3.h),
+
+                          // Masked IP line
+                          Text(
+                            isConnected
+                                ? "Your IP : 238.43.22.38 (Protected)"
+                                : "Your IP : $_maskedIp",
+                            style: TextStyle(
+                              fontSize: 12.sp,
+                              fontWeight: FontWeight.w500,
+                              color: AppColors.mutedText(context),
+                              fontFamily: 'monospace',
+                            ),
+                          ),
+                          SizedBox(height: 10.h),
+
+                          // Live Metrics Frosted Pill (Visible when CONNECTED)
+                          AnimatedOpacity(
+                            opacity: isConnected ? 1.0 : 0.0,
+                            duration: const Duration(milliseconds: 300),
+                            child: Container(
+                              padding: EdgeInsets.symmetric(horizontal: 16.w, vertical: 6.h),
+                              decoration: BoxDecoration(
+                                color: const Color(0xFFF1F5F9),
+                                borderRadius: BorderRadius.circular(22.r),
+                                border: Border.all(
+                                  color: const Color(0xFFE2E8F0),
+                                  width: 1,
+                                ),
+                              ),
+                              child: Row(
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
+                                  Text(
+                                    '↓ ${_formatSpeed(v2rayStatus.value.download, "8.4 MB/s")}',
+                                    style: TextStyle(
+                                      fontSize: 13.sp,
+                                      fontWeight: FontWeight.w700,
+                                      color: AppColors.headingText(context),
                                     ),
-                        ),
+                                  ),
+                                  Padding(
+                                    padding: EdgeInsets.symmetric(horizontal: 10.w),
+                                    child: Text(
+                                      '|',
+                                      style: TextStyle(
+                                        color: Colors.grey.withOpacity(0.5),
+                                      ),
+                                    ),
+                                  ),
+                                  Text(
+                                    '↑ ${_formatSpeed(v2rayStatus.value.upload, "1.2 MB/s")}',
+                                    style: TextStyle(
+                                      fontSize: 13.sp,
+                                      fontWeight: FontWeight.w700,
+                                      color: AppColors.headingText(context),
+                                    ),
+                                  ),
+                                  Padding(
+                                    padding: EdgeInsets.symmetric(horizontal: 10.w),
+                                    child: Text(
+                                      '|',
+                                      style: TextStyle(
+                                        color: Colors.grey.withOpacity(0.5),
+                                      ),
+                                    ),
+                                  ),
+                                  Icon(
+                                    Icons.signal_cellular_alt_rounded,
+                                    color: AppColors.statusGreen,
+                                    size: 15.sp,
+                                  ),
+                                  SizedBox(width: 4.w),
+                                  Text(
+                                    '48 ms',
+                                    style: TextStyle(
+                                      fontSize: 13.sp,
+                                      fontWeight: FontWeight.w700,
+                                      color: AppColors.statusGreen,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                          ),
+                          const Spacer(),
+
+                          // Bottom Obsidian Capsule Action Button
+                          GestureDetector(
+                            onTap: () async {
+                              if (isConnected) {
+                                // Zero ads on disconnect! Clean disconnect
+                                flutterV2ray.stopV2Ray();
+                              } else if (!isConnecting) {
+                                await _startVpnConnection();
+                              }
+                            },
+                            child: Container(
+                              width: double.infinity,
+                              height: 56.h,
+                              margin: EdgeInsets.only(bottom: 20.h),
+                              decoration: BoxDecoration(
+                                color: AppColors.obsidianBlack,
+                                borderRadius: BorderRadius.circular(28.r),
+                                boxShadow: [
+                                  BoxShadow(
+                                    color: Colors.black.withOpacity(0.3),
+                                    blurRadius: 16,
+                                    offset: const Offset(0, 6),
+                                  ),
+                                ],
+                              ),
+                              child: Center(
+                                child: isConnecting
+                                    ? Row(
+                                        mainAxisAlignment: MainAxisAlignment.center,
+                                        children: [
+                                          SizedBox(
+                                            width: 20.w,
+                                            height: 20.w,
+                                            child: const CircularProgressIndicator(
+                                              strokeWidth: 2.5,
+                                              color: Colors.white,
+                                            ),
+                                          ),
+                                          SizedBox(width: 12.w),
+                                          Text(
+                                            _isFinalizingTunnel ? 'Securing Tunnel...' : 'Connecting...',
+                                            style: TextStyle(
+                                              color: Colors.white,
+                                              fontSize: 16.sp,
+                                              fontWeight: FontWeight.w700,
+                                            ),
+                                          ),
+                                        ],
+                                      )
+                                    : isConnected
+                                        ? Row(
+                                            mainAxisAlignment: MainAxisAlignment.center,
+                                            children: [
+                                              Container(
+                                                width: 8.w,
+                                                height: 8.w,
+                                                decoration: const BoxDecoration(
+                                                  color: AppColors.statusGreen,
+                                                  shape: BoxShape.circle,
+                                                ),
+                                              ),
+                                              SizedBox(width: 10.w),
+                                              Text(
+                                                'Connected  ${_formatDuration(v2rayStatus.value.duration)}',
+                                                style: TextStyle(
+                                                  color: Colors.white,
+                                                  fontSize: 16.sp,
+                                                  fontWeight: FontWeight.w800,
+                                                  fontFamily: 'monospace',
+                                                ),
+                                              ),
+                                            ],
+                                          )
+                                        : Row(
+                                            mainAxisAlignment: MainAxisAlignment.center,
+                                            children: [
+                                              const Icon(
+                                                Icons.power_settings_new_rounded,
+                                                color: Colors.white,
+                                                size: 22,
+                                              ),
+                                              SizedBox(width: 8.w),
+                                              Text(
+                                                'Tap to Connect',
+                                                style: TextStyle(
+                                                  color: Colors.white,
+                                                  fontSize: 16.sp,
+                                                  fontWeight: FontWeight.w800,
+                                                ),
+                                              ),
+                                            ],
+                                          ),
+                              ),
+                            ),
+                          ),
+                        ],
                       ),
                     ),
                   ],
                 ),
               ),
             ),
-          ),
-        ],
+          ],
+        ),
       ),
-    ),
-  );
-}
+    );
+  }
 }

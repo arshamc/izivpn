@@ -17,7 +17,7 @@
 
         <meta-data
             android:name="com.google.android.gms.ads.APPLICATION_ID"
-            android:value="ca-app-pub-9110233398589449~4870125948"
+            android:value="ca-app-pub-3940256099942544~3347511713"
             />
 
         <activity
@@ -39,18 +39,36 @@
         </activity>
 
         <service
-            android:name="com.github.blueboytm.flutter_v2ray.v2ray.services.V2rayVPNService"
-            android:permission="android.permission.BIND_VPN_SERVICE"
+            android:name="com.github.blueboytm.flutter_v2ray.v2ray.services.V2rayProxyOnlyService"
             android:exported="false"
+            android:process=":RunSoLibV2RayDaemon" />
+
+        <service
+            android:name="com.github.blueboytm.flutter_v2ray.v2ray.services.V2rayVPNService"
+            android:enabled="true"
+            android:exported="false"
+            android:permission="android.permission.BIND_VPN_SERVICE"
+            android:process=":RunSoLibV2RayDaemon"
             android:foregroundServiceType="specialUse"
-            tools:replace="android:foregroundServiceType">
+            tools:replace="android:foregroundServiceType,android:process,android:enabled">
             <property
                 android:name="android.app.PROPERTY_SPECIAL_USE_FGS_SUBTYPE"
                 android:value="vpn" />
             <intent-filter>
                 <action android:name="android.net.VpnService" />
             </intent-filter>
+            <meta-data
+                android:name="android.net.VpnService.SUPPORTS_ALWAYS_ON"
+                android:value="true" />
         </service>
+
+        <receiver
+            android:name="com.github.blueboytm.flutter_v2ray.v2ray.V2rayReceiver"
+            android:exported="true">
+            <intent-filter>
+                <action android:name="V2RAY_CONNECTION_INFO" />
+            </intent-filter>
+        </receiver>
 
         <meta-data
             android:name="flutterEmbedding"

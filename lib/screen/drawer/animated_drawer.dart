@@ -5,6 +5,8 @@ import 'package:get/get.dart';
 import 'package:share_extend/share_extend.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:url_launcher/url_launcher.dart';
+import 'package:fluttertoast/fluttertoast.dart';
+import '../../ads/ads_service.dart';
 import '../../utils/app_colors.dart';
 import '../../widget/frosted_card.dart';
 import '../home/home_screen.dart';
@@ -221,6 +223,94 @@ class _SettingsDrawerContentState extends State<SettingsDrawerContent> {
                       setState(() => _protocolVless = v);
                       _saveSetting('protocol_vless', v);
                     },
+                  ),
+                  SizedBox(height: 10.h),
+
+                  // VIP Pass & AdMob Status Card
+                  FrostedCard(
+                    padding: EdgeInsets.symmetric(horizontal: 16.w, vertical: 12.h),
+                    borderRadius: 18.r,
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Row(
+                          children: [
+                            Icon(
+                              Icons.workspace_premium_rounded,
+                              color: const Color(0xFFFFB74D),
+                              size: 20.sp,
+                            ),
+                            SizedBox(width: 8.w),
+                            Text(
+                              'VIP & Ad Controls',
+                              style: TextStyle(
+                                fontSize: 15.sp,
+                                fontWeight: FontWeight.w700,
+                                color: AppColors.headingText(context),
+                              ),
+                            ),
+                            const Spacer(),
+                            Container(
+                              padding: EdgeInsets.symmetric(horizontal: 8.w, vertical: 2.h),
+                              decoration: BoxDecoration(
+                                color: AdConfig.isTestMode
+                                    ? const Color(0xFFE0F2FE)
+                                    : const Color(0xFFDCFCE7),
+                                borderRadius: BorderRadius.circular(10.r),
+                              ),
+                              child: Text(
+                                AdConfig.isTestMode ? 'Test IDs' : 'Production',
+                                style: TextStyle(
+                                  fontSize: 10.sp,
+                                  fontWeight: FontWeight.w700,
+                                  color: AdConfig.isTestMode
+                                      ? const Color(0xFF0369A1)
+                                      : const Color(0xFF15803D),
+                                ),
+                              ),
+                            ),
+                          ],
+                        ),
+                        SizedBox(height: 8.h),
+                        Text(
+                          'Google AdMob test IDs are active to safeguard against developer IVT account suspensions.',
+                          style: TextStyle(
+                            fontSize: 11.sp,
+                            color: AppColors.subtitleText(context),
+                          ),
+                        ),
+                        SizedBox(height: 10.h),
+                        GestureDetector(
+                          onTap: () async {
+                            await AdManager.instance.resetVipPass();
+                            Fluttertoast.showToast(msg: "VIP pass and ad cooldowns reset");
+                            if (mounted) setState(() {});
+                          },
+                          child: Container(
+                            width: double.infinity,
+                            padding: EdgeInsets.symmetric(vertical: 8.h),
+                            decoration: BoxDecoration(
+                              color: Colors.white.withOpacity(0.12),
+                              borderRadius: BorderRadius.circular(12.r),
+                              border: Border.all(
+                                color: Colors.white.withOpacity(0.2),
+                                width: 1,
+                              ),
+                            ),
+                            child: Center(
+                              child: Text(
+                                '🔄 Reset VIP & Ad Timers',
+                                style: TextStyle(
+                                  fontSize: 12.sp,
+                                  fontWeight: FontWeight.w700,
+                                  color: AppColors.headingText(context),
+                                ),
+                              ),
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
                   ),
                   SizedBox(height: 20.h),
 

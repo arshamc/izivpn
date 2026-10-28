@@ -15,7 +15,7 @@
     "flag": "global",
     "vip": false,
     "ping": 34,
-    "config": "ss://YWVzLTI1Ni1nY206WlJwZ2FCZUd4dEVOSVhndmhwa1pCS3o5R25XUlMyZFljeDlPK2EyaXdOND0%3D@202.50.253.81:19999#%7C%40ByGFW"
+    "config": "ss://YWVzLTI1Ni1nY206WlJwZ2FCZUd4dEVOSVhndmhwa1pCS3o5R25XUlMyZFljeDlPK2EyaXdOND0=@202.50.253.81:19999#%7C%40ByGFW"
   },
   {
     "id": "global-mvsbcibx-2",
@@ -24,7 +24,7 @@
     "flag": "global",
     "vip": false,
     "ping": 45,
-    "config": "ss://YWVzLTI1Ni1nY206WlJwZ2FCZUd4dEVOSVhndmhwa1pCS3o5R25XUlMyZFljeDlPK2EyaXdOND0%3D@202.50.253.54:19999#%7C%40ByGFW"
+    "config": "ss://YWVzLTI1Ni1nY206WlJwZ2FCZUd4dEVOSVhndmhwa1pCS3o5R25XUlMyZFljeDlPK2EyaXdOND0=@202.50.253.54:19999#%7C%40ByGFW"
   },
   {
     "id": "tr-mvsbb9uz",
@@ -33,7 +33,7 @@
     "flag": "tr",
     "vip": false,
     "ping": 59,
-    "config": "ss://YWVzLTI1Ni1nY206WlJwZ2FCZUd4dEVOSVhndmhwa1pCS3o5R25XUlMyZFljeDlPK2EyaXdOND0%3D@202.50.253.54:19999#%7C%40ByGFW"
+    "config": "ss://YWVzLTI1Ni1nY206WlJwZ2FCZUd4dEVOSVhndmhwa1pCS3o5R25XUlMyZFljeDlPK2EyaXdOND0=@202.50.253.54:19999#%7C%40ByGFW"
   },
   {
     "id": "nl-mvsbawid",
@@ -42,7 +42,7 @@
     "flag": "nl",
     "vip": false,
     "ping": 30,
-    "config": "ss://YWVzLTI1Ni1nY206WlJwZ2FCZUd4dEVOSVhndmhwa1pCS3o5R25XUlMyZFljeDlPK2EyaXdOND0%3D@202.50.253.63:19999#%7C%40ByGFW"
+    "config": "ss://YWVzLTI1Ni1nY206WlJwZ2FCZUd4dEVOSVhndmhwa1pCS3o5R25XUlMyZFljeDlPK2EyaXdOND0=@202.50.253.63:19999#%7C%40ByGFW"
   },
   {
     "id": "nl-mvsbawh4",
@@ -51,7 +51,7 @@
     "flag": "nl",
     "vip": false,
     "ping": 47,
-    "config": "ss://YWVzLTI1Ni1nY206WlJwZ2FCZUd4dEVOSVhndmhwa1pCS3o5R25XUlMyZFljeDlPK2EyaXdOND0%3D@202.50.253.63:19999#%7C%40ByGFW"
+    "config": "ss://YWVzLTI1Ni1nY206WlJwZ2FCZUd4dEVOSVhndmhwa1pCS3o5R25XUlMyZFljeDlPK2EyaXdOND0=@202.50.253.63:19999#%7C%40ByGFW"
   },
   {
     "id": "fr-mvsbai9z",
@@ -69,7 +69,7 @@
     "flag": "de",
     "vip": false,
     "ping": 55,
-    "config": "ss://YWVzLTI1Ni1nY206WlJwZ2FCZUd4dEVOSVhndmhwa1pCS3o5R25XUlMyZFljeDlPK2EyaXdOND0%3D@202.50.253.18:19999#%7C%40ByGFW"
+    "config": "ss://YWVzLTI1Ni1nY206WlJwZ2FCZUd4dEVOSVhndmhwa1pCS3o5R25XUlMyZFljeDlPK2EyaXdOND0=@202.50.253.18:19999#%7C%40ByGFW"
   },
   {
     "id": "de-mvsb9kok",
