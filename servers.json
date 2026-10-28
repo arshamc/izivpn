@@ -1,74 +1,182 @@
 [
   {
-    "id": "us-ny-01",
-    "serverName": "United States (New York)",
-    "country": "United States",
-    "flag": "us",
+    "id": "global-mvsbcibx-0",
+    "serverName": "FreeSocks · Kansas City · CEAK",
+    "country": "Global",
+    "flag": "global",
     "vip": false,
-    "config": "vless://e55f018b-62e1-4319-8fbe-9e263b0e5631@grimness-backlogs.cdn-content.com:443?encryption=none&type=ws&path=%2Fws&host=grimness-backlogs.cdn-content.com&security=tls&sni=grimness-backlogs.cdn-content.com&fp=chrome&alpn=http%2F1.1#FreeSocks%20%C2%B7%20Kansas%20City%20%C2%B7%20CEAK"
+    "ping": 57,
+    "config": "vless://328fab97-68ac-4e65-ac4d-bee8c545d236@grimness-backlogs.cdn-content.com:443?path=%2Fws&security=tls&alpn=http%2F1.1&encryption=none&host=grimness-backlogs.cdn-content.com&fp=chrome&type=ws&sni=grimness-backlogs.cdn-content.com#FreeSocks%20%C2%B7%20Kansas%20City%20%C2%B7%20CEAK"
   },
   {
-    "id": "fr-pa-01",
-    "serverName": "France (Paris)",
-    "country": "France",
-    "flag": "fr",
+    "id": "global-mvsbcibx-1",
+    "serverName": "|@ByGFW",
+    "country": "Global",
+    "flag": "global",
     "vip": false,
-    "config": "vless://497f5381-3533-4c6a-939c-66eb3a7de108@188.114.98.0:443?encryption=none&security=tls&sni=cdn.topingr.ir&fp=chrome&alpn=http%2F1.1&insecure=0&allowInsecure=0&ech=cloudflare-ech.com%2Budp%3A%2F%2F1.1.1.1&type=ws&host=cdn.topingr.ir&path=%2Fgropcdn#France-Paris"
+    "ping": 34,
+    "config": "ss://YWVzLTI1Ni1nY206WlJwZ2FCZUd4dEVOSVhndmhwa1pCS3o5R25XUlMyZFljeDlPK2EyaXdOND0%3D@202.50.253.81:19999#%7C%40ByGFW"
   },
   {
-    "id": "gb-lon-01",
-    "serverName": "United Kingdom (London)",
-    "country": "United Kingdom",
-    "flag": "gb",
+    "id": "global-mvsbcibx-2",
+    "serverName": "|@ByGFW",
+    "country": "Global",
+    "flag": "global",
     "vip": false,
-    "config": "trojan://5j3xqsajt1474jb3@uwu.blueknightnet.qzz.io:2087?security=tls&sni=uwu.dianaw.cc.cd&fp=chrome&alpn=h2&insecure=0&allowInsecure=0&type=ws&host=uwu.dianaw.cc.cd&path=%2F%40BlueKnight_net--%40BlueKnight_net--%40BlueKnight_net#UK-London"
+    "ping": 45,
+    "config": "ss://YWVzLTI1Ni1nY206WlJwZ2FCZUd4dEVOSVhndmhwa1pCS3o5R25XUlMyZFljeDlPK2EyaXdOND0%3D@202.50.253.54:19999#%7C%40ByGFW"
   },
   {
-    "id": "de-fra-01",
-    "serverName": "Germany (Frankfurt)",
-    "country": "Germany",
-    "flag": "de",
+    "id": "tr-mvsbb9uz",
+    "serverName": "4",
+    "country": "Turkey",
+    "flag": "tr",
     "vip": false,
-    "config": "vless://50414e45-4c5f-5a45-5553-df0ccb215ccc@147.78.140.109:2083?path=%2Fstream%2FPANEL_ZEUS%2Fdf0ccb215ccc&security=tls&encryption=none&host=bvzh11e2unzs.m-ds7yf-5n5l7t43sh77kw8.workers.dev&fp=unsafe&type=ws&sni=bvzh11e2unzs.m-ds7yf-5n5l7t43sh77kw8.workers.dev#Germany-Frankfurt"
+    "ping": 59,
+    "config": "ss://YWVzLTI1Ni1nY206WlJwZ2FCZUd4dEVOSVhndmhwa1pCS3o5R25XUlMyZFljeDlPK2EyaXdOND0%3D@202.50.253.54:19999#%7C%40ByGFW"
   },
   {
-    "id": "nl-ams-01",
-    "serverName": "Netherlands (Amsterdam)",
+    "id": "nl-mvsbawid",
+    "serverName": "2",
     "country": "Netherlands",
     "flag": "nl",
     "vip": false,
+    "ping": 30,
+    "config": "ss://YWVzLTI1Ni1nY206WlJwZ2FCZUd4dEVOSVhndmhwa1pCS3o5R25XUlMyZFljeDlPK2EyaXdOND0%3D@202.50.253.63:19999#%7C%40ByGFW"
+  },
+  {
+    "id": "nl-mvsbawh4",
+    "serverName": "2",
+    "country": "Netherlands",
+    "flag": "nl",
+    "vip": false,
+    "ping": 47,
+    "config": "ss://YWVzLTI1Ni1nY206WlJwZ2FCZUd4dEVOSVhndmhwa1pCS3o5R25XUlMyZFljeDlPK2EyaXdOND0%3D@202.50.253.63:19999#%7C%40ByGFW"
+  },
+  {
+    "id": "fr-mvsbai9z",
+    "serverName": "2",
+    "country": "France",
+    "flag": "fr",
+    "vip": false,
+    "ping": 57,
+    "config": "ss://Y2hhY2hhMjAtaWV0Zi1wb2x5MTMwNTplRGZON1NPRFFjZUlPbUlBYnRKSnRL@198.98.53.130:443#%7C%40ByGFW"
+  },
+  {
+    "id": "de-mvsba1qi",
+    "serverName": "2",
+    "country": "Germany",
+    "flag": "de",
+    "vip": false,
+    "ping": 55,
+    "config": "ss://YWVzLTI1Ni1nY206WlJwZ2FCZUd4dEVOSVhndmhwa1pCS3o5R25XUlMyZFljeDlPK2EyaXdOND0%3D@202.50.253.18:19999#%7C%40ByGFW"
+  },
+  {
+    "id": "de-mvsb9kok",
+    "serverName": "2",
+    "country": "Germany",
+    "flag": "de",
+    "vip": false,
+    "ping": 38,
+    "config": "vless://d6a26425-e365-4f2a-a516-457325577bb1@ghosts-spasm.quick-cdn.net:443?path=%2Fws&security=tls&alpn=http%2F1.1&encryption=none&host=ghosts-spasm.quick-cdn.net&fp=chrome&type=ws&sni=ghosts-spasm.quick-cdn.net#FreeSocks%20%C2%B7%20Kansas%20City%20%C2%B7%20E66P"
+  },
+  {
+    "id": "us-mvsb8gn1",
+    "serverName": "2",
+    "country": "United States",
+    "flag": "us",
+    "vip": false,
+    "ping": 46,
+    "config": "vless://d6a26425-e365-4f2a-a516-457325577bb1@grimness-backlogs.cdn-content.com:443?path=%2Fws&security=tls&alpn=http%2F1.1&encryption=none&host=grimness-backlogs.cdn-content.com&fp=chrome&type=ws&sni=grimness-backlogs.cdn-content.com#FreeSocks%20%C2%B7%20Kansas%20City%20%C2%B7%20CEAK"
+  },
+  {
+    "id": "us-mvsb7x1p",
+    "serverName": "1",
+    "country": "United States",
+    "flag": "us",
+    "vip": false,
+    "ping": 57,
+    "config": "vless://d6a26425-e365-4f2a-a516-457325577bb1@bounded-crammed.video-streams.org:443?path=%2Fws&security=tls&alpn=http%2F1.1&encryption=none&host=bounded-crammed.video-streams.org&fp=chrome&type=ws&sni=bounded-crammed.video-streams.org#FreeSocks%20%C2%B7%20Kansas%20City%20%C2%B7%20SBZJ"
+  },
+  {
+    "id": "de-fra-01",
+    "serverName": "Germany (Frankfurt Ultra-Speed)",
+    "country": "Germany",
+    "flag": "de",
+    "vip": true,
+    "ping": 38,
+    "config": "vless://50414e45-4c5f-5a45-5553-df0ccb215ccc@147.78.140.109:2083?path=%2Fstream%2FPANEL_ZEUS%2Fdf0ccb215ccc&security=tls&encryption=none&host=bvzh11e2unzs.m-ds7yf-5n5l7t43sh77kw8.workers.dev&fp=unsafe&type=ws&sni=bvzh11e2unzs.m-ds7yf-5n5l7t43sh77kw8.workers.dev#Germany-Frankfurt"
+  },
+  {
+    "id": "gb-lon-01",
+    "serverName": "United Kingdom (London Premium)",
+    "country": "United Kingdom",
+    "flag": "gb",
+    "vip": false,
+    "ping": 54,
+    "config": "trojan://5j3xqsajt1474jb3@uwu.blueknightnet.qzz.io:2087?security=tls&sni=uwu.dianaw.cc.cd&fp=chrome&alpn=h2&insecure=0&allowInsecure=0&type=ws&host=uwu.dianaw.cc.cd&path=%2F%40BlueKnight_net--%40BlueKnight_net--%40BlueKnight_net#UK-London"
+  },
+  {
+    "id": "fr-pa-01",
+    "serverName": "France (Paris Standard)",
+    "country": "France",
+    "flag": "fr",
+    "vip": false,
+    "ping": 48,
+    "config": "vless://497f5381-3533-4c6a-939c-66eb3a7de108@188.114.98.0:443?encryption=none&security=tls&sni=cdn.topingr.ir&fp=chrome&alpn=http%2F1.1&insecure=0&allowInsecure=0&ech=cloudflare-ech.com%2Budp%3A%2F%2F1.1.1.1&type=ws&host=cdn.topingr.ir&path=%2Fgropcdn#France-Paris"
+  },
+  {
+    "id": "nl-ams-01",
+    "serverName": "Netherlands (Amsterdam High-Bandwidth)",
+    "country": "Netherlands",
+    "flag": "nl",
+    "vip": false,
+    "ping": 45,
     "config": "vless://aa5d861a-7799-41a7-bdf4-7a6414cf98fd@hikvision-plus.com:2053?encryption=none&security=tls&sni=uwu.blueknightnet.qzz.io&fp=chrome&alpn=h2&insecure=0&allowInsecure=0&type=ws&host=uwu.blueknightnet.qzz.io&path=%2F%40BlueKnight_net--%40BlueKnight_net--%40BlueKnight_net--%40BlueKnight_net--%40BlueKnight_net--%40BlueKnight_net#Netherlands-Amsterdam"
   },
   {
     "id": "tr-ist-01",
-    "serverName": "Turkey (Istanbul)",
+    "serverName": "Turkey (Istanbul Low-Latency)",
     "country": "Turkey",
     "flag": "tr",
     "vip": false,
+    "ping": 29,
     "config": "trojan://e309e031-991e-4656-9934-44d10deb8fd8@nimm.mpd.cc.cd:2053?security=tls&sni=nimm.mpd.cc.cd&insecure=0&allowInsecure=0&type=ws&host=nimm.mpd.cc.cd&path=%2F0962#Turkey-Istanbul"
   },
   {
-    "id": "de-02",
-    "serverName": "Germany Server 2 (VLESS)",
-    "country": "Germany",
-    "flag": "de",
+    "id": "glb-cf-01",
+    "serverName": "Global Fast Anycast Pool #1",
+    "country": "Global",
+    "flag": "global",
     "vip": false,
-    "config": "vless://e3fb01b6-69b4-41d7-babf-696d992de194@172.67.181.232:2052?encryption=none&security=none&type=ws&host=uwu.blueknightnet.qzz.io&path=%2F%40BlueKnight_net--%40BlueKnight_net#Germany-VLESS"
+    "ping": 35,
+    "config": "vless://e5cc16a6-ea42-46b2-82ae-ad2157e1641b@172.64.150.28:2082?encryption=none&security=none&type=ws&host=hhlfy.twiladaphne.ndjp.net&path=%2Ffp#Global-Anycast-01"
   },
   {
-    "id": "gl-01",
-    "serverName": "Global Server 1 (VLESS)",
-    "country": "United States",
-    "flag": "us",
+    "id": "glb-cf-02",
+    "serverName": "Global Fast Anycast Pool #2",
+    "country": "Global",
+    "flag": "global",
     "vip": false,
-    "config": "vless://e5cc16a6-ea42-46b2-82ae-ad2157e1641b@172.64.150.28:2082?encryption=none&security=none&type=ws&host=hhlfy.twiladaphne.ndjp.net&path=%2Ffp#Global-1"
+    "ping": 38,
+    "config": "vless://e5cc16a6-ea42-46b2-82ae-ad2157e1641b@172.64.150.28:2082?encryption=none&security=none&sni=hhlfy.twiladaphne.ndjp.net&fp=chrome&type=ws&host=hhlfy.twiladaphne.ndjp.net&path=%2Ffp#Global-Anycast-02"
   },
   {
-    "id": "gl-02",
-    "serverName": "Global Server 2 (Trojan)",
-    "country": "United States",
-    "flag": "us",
+    "id": "glb-cf-03",
+    "serverName": "Global Cloudflare Worker Node #3",
+    "country": "Global",
+    "flag": "global",
     "vip": false,
-    "config": "trojan://humanity@188.114.97.6:443?security=tls&sni=www.pleadcourt.org&fp=chrome&alpn=http%2F1.1&insecure=0&allowInsecure=0&ech=cloudflare-ech.com%2Budp%3A%2F%2F1.1.1.1&type=ws&host=www.pleadcourt.org&path=%2Fassignment#Global-2"
+    "ping": 41,
+    "config": "vless://e5cc16a6-ea42-46b2-82ae-ad2157e1641b@104.18.0.181:8080?encryption=none&security=none&type=ws&host=hhlfy.twiladaphne.ndjp.net&path=%2F#Global-Anycast-03"
+  },
+  {
+    "id": "glb-cf-04",
+    "serverName": "Global Cloudflare Worker Node #4",
+    "country": "Global",
+    "flag": "global",
+    "vip": false,
+    "ping": 39,
+    "config": "vless://e3fb01b6-69b4-41d7-babf-696d992de194@172.67.181.232:2053?encryption=none&security=tls&sni=uwu.blueknightnet.qzz.io&fp=chrome&alpn=h2&insecure=0&allowInsecure=0&type=ws&host=uwu.blueknightnet.qzz.io&path=%2F%40BlueKnight_net--%40BlueKnight_net#Global-Anycast-04"
   }
 ]
