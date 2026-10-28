@@ -13,7 +13,6 @@ import '../../utils/app_colors.dart';
 import '../../widget/circular_flag.dart';
 import '../../widget/coral_wave.dart';
 import '../../widget/flight_arc_painter.dart';
-import '../../widget/frosted_card.dart';
 import '../drawer/animated_drawer.dart';
 import '../location/location_screen.dart';
 import '../notification/notification_screen.dart';
@@ -505,7 +504,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
                         ),
                         child: SizedBox(
                           height: 100.h,
-                          child: const CoralWaveWidget(isGlowing: true),
+                          child: CoralWaveWidget(height: 100.h),
                         ),
                       ),
                     ),

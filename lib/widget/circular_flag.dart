@@ -1,4 +1,3 @@
-import 'dart:math';
 import 'package:flutter/material.dart';
 import '../utils/app_colors.dart';
 
@@ -65,9 +64,6 @@ class _FlagPainter extends CustomPainter {
 
   @override
   void paint(Canvas canvas, Size size) {
-    final w = size.width;
-    final h = size.height;
-
     switch (code) {
       case 'us':
         _paintUS(canvas, size);
