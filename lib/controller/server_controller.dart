@@ -19,15 +19,20 @@ class ServerController extends GetxController {
   late final FlutterV2ray _v2ray = FlutterV2ray(onStatusChanged: (status) {});
   bool _isV2rayInitialized = false;
 
-  // Censorship-resistant endpoints (tried sequentially)
+  // Censorship-resistant endpoints & Live Dashboard API (tried sequentially)
   final List<String> _serverEndpoints = [
-    // 1. Primary CDN mirror: jsDelivr (very fast & widely accessible in Iran)
+    // 0. Live Admin Dashboard Tunnel (Active from developer's machine)
+    'https://vast-peas-beam.loca.lt/api/v1/servers',
+    // 1. Localhost aliases (Android emulator, LAN, USB cable via adb reverse)
+    'http://10.0.2.2:3000/api/v1/servers',
+    'http://localhost:3000/api/v1/servers',
+    // 2. Primary CDN mirror: jsDelivr (very fast & widely accessible in Iran)
     'https://cdn.jsdelivr.net/gh/arshamc/izivpn@main/servers.json',
-    // 2. Fastly CDN mirror
+    // 3. Fastly CDN mirror
     'https://fastly.jsdelivr.net/gh/arshamc/izivpn@main/servers.json',
-    // 3. GCore CDN mirror
+    // 4. GCore CDN mirror
     'https://gcore.jsdelivr.net/gh/arshamc/izivpn@main/servers.json',
-    // 4. Raw GitHub mirror
+    // 5. Raw GitHub mirror
     'https://raw.githubusercontent.com/arshamc/izivpn/main/servers.json',
   ];
 
@@ -78,6 +83,7 @@ class ServerController extends GetxController {
       HttpClientRequest request = await client.getUrl(Uri.parse(url)).timeout(timeout);
       request.headers.set('User-Agent', 'Mozilla/5.0 (Linux; Android 14; iziVPN)');
       request.headers.set('Accept', 'application/json, text/plain, */*');
+      request.headers.set('Bypass-Tunnel-Reminder', 'true');
 
       HttpClientResponse response = await request.close().timeout(timeout);
       if (response.statusCode == 200) {
@@ -103,6 +109,19 @@ class ServerController extends GetxController {
         } catch (_) {}
       }
       dynamic parsed = jsonDecode(trimmed);
+      // Handle both { success: true, data: [...] } format from dashboard & direct List [...]
+      if (parsed is Map && parsed['data'] is List) {
+        final list = (parsed['data'] as List).map((s) {
+          if (s is Map) {
+            // Map countryCode to flag if missing
+            if (s['flag'] == null && s['countryCode'] != null) {
+              s['flag'] = s['countryCode'];
+            }
+          }
+          return s;
+        }).toList();
+        if (list.isNotEmpty) return list;
+      }
       if (parsed is List && parsed.isNotEmpty) {
         return parsed;
       }
