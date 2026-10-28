@@ -16,18 +16,30 @@ class CoralWaveWidget extends StatelessWidget {
     final isDark = Theme.of(context).brightness == Brightness.dark;
     final fillColor = isDark ? AppColors.obsidianFogBottom : AppColors.pureFogBottom;
 
-    return CustomPaint(
-      size: Size(double.infinity, height),
-      painter: _CoralWavePainter(
-        fillColor: fillColor,
-        strokeColor: AppColors.brandCoral,
-      ),
-      child: Container(
-        height: height,
-        width: double.infinity,
-        padding: const EdgeInsets.only(top: 36),
-        child: child,
-      ),
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final w = constraints.maxWidth.isFinite
+            ? constraints.maxWidth
+            : MediaQuery.of(context).size.width;
+
+        return Stack(
+          children: [
+            CustomPaint(
+              size: Size(w, height),
+              painter: _CoralWavePainter(
+                fillColor: fillColor,
+                strokeColor: AppColors.brandCoral,
+              ),
+            ),
+            Container(
+              height: height,
+              width: w,
+              padding: const EdgeInsets.only(top: 36),
+              child: child,
+            ),
+          ],
+        );
+      },
     );
   }
 }
@@ -43,8 +55,8 @@ class _CoralWavePainter extends CustomPainter {
 
   @override
   void paint(Canvas canvas, Size size) {
-    final w = size.width;
-    final h = size.height;
+    final w = (size.width.isFinite && size.width > 0) ? size.width : 390.0;
+    final h = (size.height.isFinite && size.height > 0) ? size.height : 400.0;
 
     final fillPaint = Paint()
       ..color = fillColor

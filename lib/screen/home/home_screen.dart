@@ -218,13 +218,13 @@ class _HomeScreenState extends State<HomeScreen> {
     final bgAsset = _getBackgroundForState(state, _country);
 
     return Scaffold(
-      backgroundColor: Colors.white,
+      backgroundColor: isDark ? AppColors.obsidianBlack : const Color(0xFF8FA5B5),
       body: Stack(
         children: [
           // 1. Animated Atmospheric Background Switcher
           Positioned.fill(
             child: AnimatedSwitcher(
-              duration: const Duration(milliseconds: 700),
+              duration: const Duration(milliseconds: 500),
               switchInCurve: Curves.easeInOutCubic,
               switchOutCurve: Curves.easeInOutCubic,
               transitionBuilder: (child, animation) {
@@ -242,6 +242,11 @@ class _HomeScreenState extends State<HomeScreen> {
                 fit: BoxFit.cover,
                 width: double.infinity,
                 height: double.infinity,
+                errorBuilder: (context, error, stackTrace) {
+                  return Container(
+                    color: isDark ? AppColors.obsidianBlack : const Color(0xFF8FA5B5),
+                  );
+                },
               ),
             ),
           ),
@@ -268,17 +273,17 @@ class _HomeScreenState extends State<HomeScreen> {
                   // Hamburger Menu Button
                   GestureDetector(
                     onTap: () {
-                      zoomDrawerController.toggle!();
+                      zoomDrawerController.toggle?.call();
                     },
                     child: Container(
                       width: 44.w,
                       height: 44.w,
                       decoration: BoxDecoration(
-                        color: Colors.white.withOpacity(0.22),
+                        color: Colors.black.withOpacity(0.2),
                         shape: BoxShape.circle,
                         border: Border.all(
-                          color: Colors.white.withOpacity(0.35),
-                          width: 1,
+                          color: Colors.white.withOpacity(0.4),
+                          width: 1.2,
                         ),
                       ),
                       child: const Icon(
@@ -315,6 +320,13 @@ class _HomeScreenState extends State<HomeScreen> {
                             fontWeight: FontWeight.w800,
                             color: Colors.white,
                             letterSpacing: -0.3,
+                            shadows: [
+                              Shadow(
+                                color: Colors.black.withOpacity(0.4),
+                                blurRadius: 6,
+                                offset: const Offset(0, 2),
+                              ),
+                            ],
                           ),
                         ),
                       ],
@@ -333,11 +345,11 @@ class _HomeScreenState extends State<HomeScreen> {
                       width: 44.w,
                       height: 44.w,
                       decoration: BoxDecoration(
-                        color: Colors.white.withOpacity(0.22),
+                        color: Colors.black.withOpacity(0.2),
                         shape: BoxShape.circle,
                         border: Border.all(
-                          color: Colors.white.withOpacity(0.35),
-                          width: 1,
+                          color: Colors.white.withOpacity(0.4),
+                          width: 1.2,
                         ),
                       ),
                       child: const Icon(
@@ -363,11 +375,11 @@ class _HomeScreenState extends State<HomeScreen> {
                           width: 44.w,
                           height: 44.w,
                           decoration: BoxDecoration(
-                            color: Colors.white.withOpacity(0.22),
+                            color: Colors.black.withOpacity(0.2),
                             shape: BoxShape.circle,
                             border: Border.all(
-                              color: Colors.white.withOpacity(0.35),
-                              width: 1,
+                              color: Colors.white.withOpacity(0.4),
+                              width: 1.2,
                             ),
                           ),
                           child: const Icon(
@@ -402,7 +414,7 @@ class _HomeScreenState extends State<HomeScreen> {
             right: 0,
             bottom: 0,
             child: CoralWaveWidget(
-              height: 375.h,
+              height: 415.h,
               child: Padding(
                 padding: EdgeInsets.symmetric(horizontal: 20.w),
                 child: Column(
@@ -414,11 +426,11 @@ class _HomeScreenState extends State<HomeScreen> {
                         Get.to(() => const LocationScreen())?.then((_) => loadConfigData());
                       },
                       child: Container(
-                        width: 72.w,
-                        height: 72.w,
+                        width: 68.w,
+                        height: 68.w,
                         decoration: BoxDecoration(
                           color: Colors.white,
-                          borderRadius: BorderRadius.circular(22.r),
+                          borderRadius: BorderRadius.circular(20.r),
                           border: Border.all(
                             color: isConnected ? AppColors.brandCoral : const Color(0xFFE2E8F0),
                             width: 2,
@@ -436,13 +448,13 @@ class _HomeScreenState extends State<HomeScreen> {
                         child: Center(
                           child: CircularFlagWidget(
                             flagCode: _flag ?? 'us',
-                            size: 42.w,
+                            size: 40.w,
                             showOuterRing: false,
                           ),
                         ),
                       ),
                     ),
-                    SizedBox(height: 14.h),
+                    SizedBox(height: 10.h),
 
                     // Country & Server Name
                     Text(
@@ -450,13 +462,13 @@ class _HomeScreenState extends State<HomeScreen> {
                           ? (_country ?? "United States")
                           : (isConnecting ? "Connecting..." : "Unsecured Network"),
                       style: TextStyle(
-                        fontSize: 26.sp,
+                        fontSize: 24.sp,
                         fontWeight: FontWeight.w900,
                         color: AppColors.headingText(context),
                         letterSpacing: -0.5,
                       ),
                     ),
-                    SizedBox(height: 4.h),
+                    SizedBox(height: 3.h),
 
                     // City & Protocol
                     Text(
@@ -464,12 +476,12 @@ class _HomeScreenState extends State<HomeScreen> {
                           ? "${_serverName ?? 'New York'} • ${_detectProtocol(_config)}"
                           : (isConnecting ? "Negotiating Xray Tunnel" : "Exposed Connection"),
                       style: TextStyle(
-                        fontSize: 15.sp,
+                        fontSize: 14.sp,
                         fontWeight: FontWeight.w600,
                         color: AppColors.subtitleText(context),
                       ),
                     ),
-                    SizedBox(height: 4.h),
+                    SizedBox(height: 3.h),
 
                     // Masked IP line
                     Text(
@@ -483,14 +495,14 @@ class _HomeScreenState extends State<HomeScreen> {
                         fontFamily: 'monospace',
                       ),
                     ),
-                    SizedBox(height: 14.h),
+                    SizedBox(height: 10.h),
 
                     // Live Metrics Frosted Pill (Visible when CONNECTED)
                     AnimatedOpacity(
                       opacity: isConnected ? 1.0 : 0.0,
                       duration: const Duration(milliseconds: 300),
                       child: Container(
-                        padding: EdgeInsets.symmetric(horizontal: 16.w, vertical: 8.h),
+                        padding: EdgeInsets.symmetric(horizontal: 16.w, vertical: 6.h),
                         decoration: BoxDecoration(
                           color: const Color(0xFFF1F5F9),
                           borderRadius: BorderRadius.circular(22.r),
@@ -568,11 +580,11 @@ class _HomeScreenState extends State<HomeScreen> {
                       },
                       child: Container(
                         width: double.infinity,
-                        height: 60.h,
-                        margin: EdgeInsets.only(bottom: 24.h),
+                        height: 56.h,
+                        margin: EdgeInsets.only(bottom: 20.h),
                         decoration: BoxDecoration(
                           color: AppColors.obsidianBlack,
-                          borderRadius: BorderRadius.circular(30.r),
+                          borderRadius: BorderRadius.circular(28.r),
                           boxShadow: [
                             BoxShadow(
                               color: Colors.black.withOpacity(0.3),

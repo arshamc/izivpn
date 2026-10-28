@@ -16,17 +16,20 @@ class AnimatedDrawerScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return ZoomDrawer(
-      controller: zoomDrawerController,
-      menuScreen: const SettingsDrawerContent(),
-      mainScreen: const HomeScreen(),
-      borderRadius: 24.0,
-      showShadow: true,
-      angle: -6.0,
-      slideWidth: MediaQuery.of(context).size.width * 0.78,
-      menuBackgroundColor: const Color(0xFF1E293B),
-      shadowLayer1Color: AppColors.brandCoral.withOpacity(0.15),
-      shadowLayer2Color: Colors.black.withOpacity(0.2),
+    return Scaffold(
+      backgroundColor: const Color(0xFF1E293B),
+      body: ZoomDrawer(
+        controller: zoomDrawerController,
+        menuScreen: const SettingsDrawerContent(),
+        mainScreen: const HomeScreen(),
+        borderRadius: 24.0,
+        showShadow: true,
+        angle: 0.0,
+        slideWidth: MediaQuery.of(context).size.width * 0.78,
+        menuBackgroundColor: const Color(0xFF1E293B),
+        shadowLayer1Color: AppColors.brandCoral.withOpacity(0.15),
+        shadowLayer2Color: Colors.black.withOpacity(0.2),
+      ),
     );
   }
 }
