@@ -32,15 +32,22 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
   String? _config;
   String _maskedIp = "185.143.22.10 (Exposed)";
 
+  bool _isUserConnecting = false;
+  Timer? _connectTimeoutTimer;
+
   late final FlutterV2ray flutterV2ray = FlutterV2ray(
     onStatusChanged: (status) {
-      final oldState = v2rayStatus.value.state;
       v2rayStatus.value = status;
-      if (mounted) setState(() {});
-
-      if (oldState == "CONNECTING" && status.state == "CONNECTED") {
+      if (status.state == "CONNECTED") {
+        _isUserConnecting = false;
+        _connectTimeoutTimer?.cancel();
         _handlePostConnectionAdFlow();
+      } else if (status.state == "DISCONNECTED") {
+        _isUserConnecting = false;
+        _isFinalizingTunnel = false;
+        _connectTimeoutTimer?.cancel();
       }
+      if (mounted) setState(() {});
     },
   );
 
@@ -91,8 +98,10 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
     if (state == AppLifecycleState.paused ||
         state == AppLifecycleState.inactive ||
         state == AppLifecycleState.hidden) {
-      if (_isFinalizingTunnel || v2rayStatus.value.state == "CONNECTING") {
+      if (_isFinalizingTunnel || _isUserConnecting || v2rayStatus.value.state == "CONNECTING") {
         flutterV2ray.stopV2Ray();
+        _isUserConnecting = false;
+        _connectTimeoutTimer?.cancel();
         if (mounted) {
           setState(() {
             _isFinalizingTunnel = false;
@@ -153,9 +162,34 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
   Future<void> _startVpnConnection() async {
     if (_config != null && _config!.trim().isNotEmpty) {
       if (v2rayStatus.value.state == "DISCONNECTED") {
+        setState(() {
+          _isUserConnecting = true;
+        });
+
+        // 14-second hard safety timeout for flight connecting animation
+        _connectTimeoutTimer?.cancel();
+        _connectTimeoutTimer = Timer(const Duration(seconds: 14), () {
+          if (_isUserConnecting && v2rayStatus.value.state != "CONNECTED") {
+            if (mounted) {
+              setState(() {
+                _isUserConnecting = false;
+              });
+              flutterV2ray.stopV2Ray();
+              Fluttertoast.showToast(
+                msg: "Connection timed out. Please try another server.",
+                toastLength: Toast.LENGTH_LONG,
+              );
+            }
+          }
+        });
+
         try {
           final hasPerm = await _checkAndRequestPermissions();
           if (!hasPerm) {
+            _connectTimeoutTimer?.cancel();
+            setState(() {
+              _isUserConnecting = false;
+            });
             Fluttertoast.showToast(
               msg: "Notification permission is required for VPN service",
               toastLength: Toast.LENGTH_LONG,
@@ -166,6 +200,10 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
           V2RayURL parser = FlutterV2ray.parseFromURL(cleanConfig);
           final fullConfig = parser.getFullConfiguration();
           if (fullConfig.isEmpty) {
+            _connectTimeoutTimer?.cancel();
+            setState(() {
+              _isUserConnecting = false;
+            });
             Fluttertoast.showToast(msg: "Configuration error: Empty config");
             return;
           }
@@ -177,8 +215,17 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
               notificationDisconnectButtonName: "DISCONNECT",
             );
             if (mounted) setState(() {});
+          } else {
+            _connectTimeoutTimer?.cancel();
+            setState(() {
+              _isUserConnecting = false;
+            });
           }
         } catch (e) {
+          _connectTimeoutTimer?.cancel();
+          setState(() {
+            _isUserConnecting = false;
+          });
           Fluttertoast.showToast(msg: "Error connecting: $e");
         }
       }
@@ -210,12 +257,13 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
 
   @override
   void dispose() {
+    _connectTimeoutTimer?.cancel();
     WidgetsBinding.instance.removeObserver(this);
     super.dispose();
   }
 
   String _getBackgroundForState(String state, String? country) {
-    if (state == "CONNECTING" || _isFinalizingTunnel) {
+    if (_isUserConnecting || state == "CONNECTING" || _isFinalizingTunnel) {
       return 'assets/images/bg_connecting_flight.jpg';
     }
     if (state == "CONNECTED") {
@@ -253,8 +301,8 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
   Widget build(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
     final state = v2rayStatus.value.state;
-    final isConnected = state == "CONNECTED" && !_isFinalizingTunnel;
-    final isConnecting = state == "CONNECTING" || _isFinalizingTunnel;
+    final isConnected = state == "CONNECTED" && !_isFinalizingTunnel && !_isUserConnecting;
+    final isConnecting = _isUserConnecting || state == "CONNECTING" || _isFinalizingTunnel;
     final bgAsset = _getBackgroundForState(state, _country);
 
     final screenH = MediaQuery.of(context).size.height;
@@ -306,7 +354,10 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
 
             // 2. Interactive Flight Arc Overlay (active during CONNECTING)
             Positioned.fill(
-              child: FlightArcOverlay(isConnecting: isConnecting),
+              child: FlightArcOverlay(
+                isConnecting: isConnecting,
+                targetCountry: _country,
+              ),
             ),
 
             // 3. Top Transparent Brand Header
@@ -440,40 +491,72 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
             // 4. Middle Flight Status Indicator (When Connecting or Finalizing)
             if (isConnecting)
               Positioned(
-                top: 140.h,
-                left: 0,
-                right: 0,
+                top: 135.h,
+                left: 20.w,
+                right: 20.w,
                 child: Center(
                   child: Container(
-                    padding: EdgeInsets.symmetric(horizontal: 18.w, vertical: 8.h),
+                    padding: EdgeInsets.symmetric(horizontal: 18.w, vertical: 10.h),
                     decoration: BoxDecoration(
-                      color: Colors.black.withOpacity(0.45),
+                      color: Colors.black.withOpacity(0.65),
                       borderRadius: BorderRadius.circular(24.r),
                       border: Border.all(
-                        color: Colors.white.withOpacity(0.25),
-                        width: 1,
+                        color: AppColors.brandCoral.withOpacity(0.6),
+                        width: 1.2,
                       ),
+                      boxShadow: [
+                        BoxShadow(
+                          color: AppColors.brandCoral.withOpacity(0.35),
+                          blurRadius: 16,
+                          offset: const Offset(0, 4),
+                        ),
+                      ],
                     ),
                     child: Row(
                       mainAxisSize: MainAxisSize.min,
                       children: [
                         SizedBox(
-                          width: 14.w,
-                          height: 14.w,
+                          width: 16.w,
+                          height: 16.w,
                           child: const CircularProgressIndicator(
-                            strokeWidth: 2,
+                            strokeWidth: 2.5,
                             color: AppColors.brandCoral,
                           ),
                         ),
                         SizedBox(width: 10.w),
                         Text(
                           _isFinalizingTunnel
-                              ? 'Finalizing Secure Tunnel...'
-                              : 'Establishing Xray Tunnel...',
+                              ? 'Securing Tunnel...'
+                              : '✈️ Flying to ${_country ?? "Server"}...',
                           style: TextStyle(
                             fontSize: 13.sp,
                             fontWeight: FontWeight.w700,
                             color: Colors.white,
+                          ),
+                        ),
+                        SizedBox(width: 12.w),
+                        GestureDetector(
+                          onTap: () {
+                            _connectTimeoutTimer?.cancel();
+                            _isUserConnecting = false;
+                            _isFinalizingTunnel = false;
+                            flutterV2ray.stopV2Ray();
+                            if (mounted) setState(() {});
+                          },
+                          child: Container(
+                            padding: EdgeInsets.symmetric(horizontal: 10.w, vertical: 3.h),
+                            decoration: BoxDecoration(
+                              color: Colors.white.withOpacity(0.18),
+                              borderRadius: BorderRadius.circular(12.r),
+                            ),
+                            child: Text(
+                              'Cancel',
+                              style: TextStyle(
+                                fontSize: 11.sp,
+                                fontWeight: FontWeight.w700,
+                                color: Colors.white,
+                              ),
+                            ),
                           ),
                         ),
                       ],
@@ -568,16 +651,32 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
                           ),
                           SizedBox(height: 4.h),
 
-                          // Country & Server Name
-                          Text(
-                            isConnected
-                                ? (_country ?? "United States")
-                                : (isConnecting ? "Connecting..." : "Unsecured Network"),
-                            style: TextStyle(
-                              fontSize: 24.sp,
-                              fontWeight: FontWeight.w900,
-                              color: AppColors.headingText(context),
-                              letterSpacing: -0.5,
+                          // Country & Server Name (Tappable to change server)
+                          GestureDetector(
+                            onTap: () {
+                              Get.to(() => const LocationScreen())?.then((_) => loadConfigData());
+                            },
+                            child: Row(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                Text(
+                                  isConnected
+                                      ? (_country ?? "United States")
+                                      : (isConnecting ? "Connecting..." : (_country ?? "United States")),
+                                  style: TextStyle(
+                                    fontSize: 24.sp,
+                                    fontWeight: FontWeight.w900,
+                                    color: AppColors.headingText(context),
+                                    letterSpacing: -0.5,
+                                  ),
+                                ),
+                                SizedBox(width: 6.w),
+                                Icon(
+                                  Icons.expand_more_rounded,
+                                  color: AppColors.brandCoral,
+                                  size: 24.sp,
+                                ),
+                              ],
                             ),
                           ),
                           SizedBox(height: 3.h),
@@ -680,13 +779,70 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
                           ),
                           const Spacer(),
 
+                          // Dedicated Change Server Button (Active & Visible when Connected)
+                          if (isConnected) ...[
+                            GestureDetector(
+                              onTap: () {
+                                Get.to(() => const LocationScreen())?.then((_) => loadConfigData());
+                              },
+                              child: Container(
+                                width: double.infinity,
+                                height: 50.h,
+                                margin: EdgeInsets.only(bottom: 12.h),
+                                decoration: BoxDecoration(
+                                  color: isDark ? const Color(0xFF263040) : const Color(0xFFF1F5F9),
+                                  borderRadius: BorderRadius.circular(25.r),
+                                  border: Border.all(
+                                    color: AppColors.brandCoral.withOpacity(0.55),
+                                    width: 1.5,
+                                  ),
+                                ),
+                                child: Row(
+                                  mainAxisAlignment: MainAxisAlignment.center,
+                                  children: [
+                                    Icon(
+                                      Icons.travel_explore_rounded,
+                                      color: AppColors.brandCoral,
+                                      size: 20.sp,
+                                    ),
+                                    SizedBox(width: 8.w),
+                                    Text(
+                                      'Change Server / لیست سرورها',
+                                      style: TextStyle(
+                                        fontSize: 14.sp,
+                                        fontWeight: FontWeight.w700,
+                                        color: AppColors.headingText(context),
+                                      ),
+                                    ),
+                                    SizedBox(width: 6.w),
+                                    Icon(
+                                      Icons.arrow_forward_ios_rounded,
+                                      color: AppColors.brandCoral,
+                                      size: 12.sp,
+                                    ),
+                                  ],
+                                ),
+                              ),
+                            ),
+                          ],
+
                           // Bottom Obsidian Capsule Action Button
                           GestureDetector(
                             onTap: () async {
                               if (isConnected) {
                                 // Zero ads on disconnect! Clean disconnect
+                                _isUserConnecting = false;
+                                _isFinalizingTunnel = false;
+                                _connectTimeoutTimer?.cancel();
                                 flutterV2ray.stopV2Ray();
-                              } else if (!isConnecting) {
+                                if (mounted) setState(() {});
+                              } else if (isConnecting) {
+                                _connectTimeoutTimer?.cancel();
+                                _isUserConnecting = false;
+                                _isFinalizingTunnel = false;
+                                flutterV2ray.stopV2Ray();
+                                if (mounted) setState(() {});
+                              } else {
                                 await _startVpnConnection();
                               }
                             },
@@ -720,10 +876,10 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
                                           ),
                                           SizedBox(width: 12.w),
                                           Text(
-                                            _isFinalizingTunnel ? 'Securing Tunnel...' : 'Connecting...',
+                                            _isFinalizingTunnel ? 'Securing Tunnel...' : 'Connecting... (Cancel)',
                                             style: TextStyle(
                                               color: Colors.white,
-                                              fontSize: 16.sp,
+                                              fontSize: 15.sp,
                                               fontWeight: FontWeight.w700,
                                             ),
                                           ),
@@ -733,17 +889,14 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
                                         ? Row(
                                             mainAxisAlignment: MainAxisAlignment.center,
                                             children: [
-                                              Container(
-                                                width: 8.w,
-                                                height: 8.w,
-                                                decoration: const BoxDecoration(
-                                                  color: AppColors.statusGreen,
-                                                  shape: BoxShape.circle,
-                                                ),
+                                              const Icon(
+                                                Icons.power_settings_new_rounded,
+                                                color: AppColors.brandCoral,
+                                                size: 22,
                                               ),
                                               SizedBox(width: 10.w),
                                               Text(
-                                                'Connected  ${_formatDuration(v2rayStatus.value.duration)}',
+                                                'Disconnect (${_formatDuration(v2rayStatus.value.duration)})',
                                                 style: TextStyle(
                                                   color: Colors.white,
                                                   fontSize: 16.sp,
@@ -755,6 +908,26 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
                                           )
                                         : Row(
                                             mainAxisAlignment: MainAxisAlignment.center,
+                                            children: [
+                                              const Icon(
+                                                Icons.power_settings_new_rounded,
+                                                color: Colors.white,
+                                                size: 22,
+                                              ),
+                                              SizedBox(width: 8.w),
+                                              Text(
+                                                'Tap to Connect',
+                                                style: TextStyle(
+                                                  color: Colors.white,
+                                                  fontSize: 16.sp,
+                                                  fontWeight: FontWeight.w800,
+                                                ),
+                                              ),
+                                            ],
+                                          ),
+                              ),
+                            ),
+                          ),
                                             children: [
                                               const Icon(
                                                 Icons.power_settings_new_rounded,

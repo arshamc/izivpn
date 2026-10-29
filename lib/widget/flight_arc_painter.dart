@@ -4,8 +4,13 @@ import '../utils/app_colors.dart';
 
 class FlightArcOverlay extends StatefulWidget {
   final bool isConnecting;
+  final String? targetCountry;
 
-  const FlightArcOverlay({super.key, required this.isConnecting});
+  const FlightArcOverlay({
+    super.key,
+    required this.isConnecting,
+    this.targetCountry,
+  });
 
   @override
   State<FlightArcOverlay> createState() => _FlightArcOverlayState();
@@ -20,7 +25,7 @@ class _FlightArcOverlayState extends State<FlightArcOverlay>
     super.initState();
     _controller = AnimationController(
       vsync: this,
-      duration: const Duration(milliseconds: 2200),
+      duration: const Duration(milliseconds: 2400),
     );
     if (widget.isConnecting) {
       _controller.repeat();
@@ -34,6 +39,7 @@ class _FlightArcOverlayState extends State<FlightArcOverlay>
       _controller.repeat();
     } else if (!widget.isConnecting && _controller.isAnimating) {
       _controller.stop();
+      _controller.reset();
     }
   }
 
@@ -52,7 +58,9 @@ class _FlightArcOverlayState extends State<FlightArcOverlay>
       builder: (context, child) {
         return CustomPaint(
           size: Size.infinite,
-          painter: _FlightArcPainter(progress: _controller.value),
+          painter: _FlightArcPainter(
+            progress: _controller.value,
+          ),
         );
       },
     );
@@ -69,70 +77,134 @@ class _FlightArcPainter extends CustomPainter {
     final w = size.width;
     final h = size.height;
 
-    // Origin and destination over the globe area
-    final p0 = Offset(w * 0.22, h * 0.38); // Origin (left globe pin)
-    final p2 = Offset(w * 0.76, h * 0.36); // Target (right globe pin)
-    final p1 = Offset(w * 0.49, h * 0.16); // Arc zenith (control point above globe)
+    // Origin (Your Location) and Target (VPN Server) in upper atmosphere
+    final p0 = Offset(w * 0.16, h * 0.32);
+    final p2 = Offset(w * 0.84, h * 0.28);
+    final p1 = Offset(w * 0.50, h * 0.10); // Apex of arc above horizon
 
+    // 1. Draw glowing pulsed beacon rings around origin & destination
+    _drawBeacon(canvas, p0, AppColors.statusGreen, progress, 'HOME');
+    _drawBeacon(canvas, p2, AppColors.brandCoral, (progress + 0.5) % 1.0, 'SERVER');
+
+    // 2. Trajectory Arc Path
+    final arcPath = Path();
+    arcPath.moveTo(p0.dx, p0.dy);
+    arcPath.quadraticBezierTo(p1.dx, p1.dy, p2.dx, p2.dy);
+
+    // Faint full flight corridor
+    final corridorPaint = Paint()
+      ..color = Colors.white.withOpacity(0.18)
+      ..style = PaintingStyle.stroke
+      ..strokeWidth = 2.0;
+    canvas.drawPath(arcPath, corridorPaint);
+
+    // Glowing Neon Trajectory
     final glowPaint = Paint()
       ..color = AppColors.brandCoral.withOpacity(0.4)
       ..style = PaintingStyle.stroke
       ..strokeWidth = 6.0
       ..strokeCap = StrokeCap.round
-      ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 8);
+      ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 10);
+    canvas.drawPath(arcPath, glowPaint);
 
-    final linePaint = Paint()
-      ..color = AppColors.brandCoral
-      ..style = PaintingStyle.stroke
-      ..strokeWidth = 2.5
-      ..strokeCap = StrokeCap.round;
-
-    final fullPath = Path();
-    fullPath.moveTo(p0.dx, p0.dy);
-    fullPath.quadraticBezierTo(p1.dx, p1.dy, p2.dx, p2.dy);
-
-    // Draw full trajectory faint trace
-    canvas.drawPath(fullPath, glowPaint);
-    canvas.drawPath(fullPath, linePaint);
-
-    // Compute airplane current position along quadratic curve
+    // 3. Compute current airplane position along the quadratic Bézier curve
     final t = progress;
     final u = 1 - t;
     final currentX = u * u * p0.dx + 2 * u * t * p1.dx + t * t * p2.dx;
     final currentY = u * u * p0.dy + 2 * u * t * p1.dy + t * t * p2.dy;
 
-    // Tangent angle for plane orientation
+    // Tangent angle for plane heading
     final dx = 2 * u * (p1.dx - p0.dx) + 2 * t * (p2.dx - p1.dx);
     final dy = 2 * u * (p1.dy - p0.dy) + 2 * t * (p2.dy - p1.dy);
     final angle = atan2(dy, dx);
 
-    // Draw origin and target beacon pins
-    final pinPaint = Paint()..color = AppColors.brandCoral;
-    canvas.drawCircle(p0, 4.5, pinPaint);
-    canvas.drawCircle(p2, 4.5, pinPaint);
+    // 4. Draw Jet Trail (Glowing Comet Tail behind plane)
+    final tailLength = 0.22;
+    if (t > 0.02) {
+      final tailStartT = max(0.0, t - tailLength);
+      final tailSteps = 12;
+      for (int i = 0; i < tailSteps; i++) {
+        final stepT = tailStartT + (t - tailStartT) * (i / tailSteps);
+        final stepU = 1 - stepT;
+        final sx = stepU * stepU * p0.dx + 2 * stepU * stepT * p1.dx + stepT * stepT * p2.dx;
+        final sy = stepU * stepU * p0.dy + 2 * stepU * stepT * p1.dy + stepT * stepT * p2.dy;
+        final alpha = (i / tailSteps) * 0.75;
 
-    // Draw airplane at (currentX, currentY)
+        final particlePaint = Paint()
+          ..color = AppColors.brandCoral.withOpacity(alpha)
+          ..style = PaintingStyle.fill
+          ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 3);
+
+        canvas.drawCircle(Offset(sx, sy), 2.0 + (i / tailSteps) * 2.5, particlePaint);
+      }
+    }
+
+    // 5. Draw Modern Supersonic Jet Airplane at (currentX, currentY)
     canvas.save();
     canvas.translate(currentX, currentY);
     canvas.rotate(angle);
 
-    final planePaint = Paint()..color = Colors.white;
-    final planeGlow = Paint()
-      ..color = AppColors.cyberCyan.withOpacity(0.8)
+    // Jet Aura Glow
+    final auraPaint = Paint()
+      ..color = Colors.white.withOpacity(0.9)
+      ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 8);
+    canvas.drawCircle(Offset.zero, 12, auraPaint);
+
+    // Airplane Body Shape (Scale ~2.5x larger for high visibility)
+    final planeBody = Path();
+    planeBody.moveTo(22, 0);          // Nose tip
+    planeBody.lineTo(-14, -14);       // Left wingtip
+    planeBody.lineTo(-8, -4);         // Left wing inner
+    planeBody.lineTo(-18, -4);        // Left tail fin
+    planeBody.lineTo(-14, 0);         // Engine nozzle
+    planeBody.lineTo(-18, 4);         // Right tail fin
+    planeBody.lineTo(-8, 4);          // Right wing inner
+    planeBody.lineTo(-14, 14);        // Right wingtip
+    planeBody.close();
+
+    // Jet Thruster Fire / Afterburner
+    final thrusterPaint = Paint()
+      ..color = AppColors.cyberCyan
       ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 6);
+    final thrusterPath = Path();
+    thrusterPath.moveTo(-14, -3);
+    thrusterPath.lineTo(-26 - (sin(progress * 24) * 4), 0);
+    thrusterPath.lineTo(-14, 3);
+    thrusterPath.close();
+    canvas.drawPath(thrusterPath, thrusterPaint);
 
-    // Sleek paper plane shape
-    final planePath = Path();
-    planePath.moveTo(12, 0);
-    planePath.lineTo(-8, -6);
-    planePath.lineTo(-4, 0);
-    planePath.lineTo(-8, 6);
-    planePath.close();
+    // Jet Fuselage Fill (Crisp White with Cyber Cyan Wing Accent)
+    final bodyPaint = Paint()
+      ..color = Colors.white
+      ..style = PaintingStyle.fill;
+    canvas.drawPath(planeBody, bodyPaint);
 
-    canvas.drawPath(planePath, planeGlow);
-    canvas.drawPath(planePath, planePaint);
+    // Center Cockpit Stripe
+    final cockpitPaint = Paint()
+      ..color = AppColors.brandCoral
+      ..strokeWidth = 2.0
+      ..style = PaintingStyle.stroke;
+    canvas.drawLine(const Offset(-4, 0), const Offset(16, 0), cockpitPaint);
 
     canvas.restore();
+  }
+
+  void _drawBeacon(Canvas canvas, Offset center, Color color, double phase, String label) {
+    // Pulsing outer ripple
+    final rippleRadius = 6.0 + phase * 18.0;
+    final rippleOpacity = max(0.0, (1.0 - phase) * 0.7);
+    final ripplePaint = Paint()
+      ..color = color.withOpacity(rippleOpacity)
+      ..style = PaintingStyle.stroke
+      ..strokeWidth = 2.0;
+    canvas.drawCircle(center, rippleRadius, ripplePaint);
+
+    // Solid Beacon Core
+    final corePaint = Paint()..color = color;
+    canvas.drawCircle(center, 5.5, corePaint);
+
+    final whiteCenter = Paint()..color = Colors.white;
+    canvas.drawCircle(center, 2.5, whiteCenter);
   }
 
   @override

@@ -268,7 +268,7 @@ class _LocationScreenState extends State<LocationScreen> {
   }
 
   Widget _buildPingBadge(int? ping, bool isPinging) {
-    if (isPinging) {
+    if (ping == null && isPinging) {
       return SizedBox(
         width: 14.w,
         height: 14.w,
@@ -384,14 +384,16 @@ class _LocationScreenState extends State<LocationScreen> {
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
-                            Text(
-                              'izi vpn',
+                            Obx(() => Text(
+                              serverController.lastSyncTime.value.isNotEmpty
+                                  ? '● Synced ${serverController.lastSyncTime.value} (${serverController.serverData.length} Servers)'
+                                  : 'izi vpn servers (${serverController.serverData.length})',
                               style: TextStyle(
-                                fontSize: 13.sp,
-                                fontWeight: FontWeight.w500,
-                                color: Colors.white.withOpacity(0.8),
+                                fontSize: 12.sp,
+                                fontWeight: FontWeight.w600,
+                                color: Colors.white.withOpacity(0.9),
                               ),
-                            ),
+                            )),
                             Text(
                               'Select Location',
                               style: TextStyle(

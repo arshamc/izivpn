@@ -16,6 +16,8 @@ class ServerController extends GetxController {
   // Ping tracking: server id -> ping in ms (-1 = timeout/error)
   RxMap<String, int> pingMap = <String, int>{}.obs;
   RxBool isPinging = false.obs;
+  RxString lastSyncTime = ''.obs;
+  RxString lastSyncSource = ''.obs;
 
   late final FlutterV2ray _v2ray = FlutterV2ray(onStatusChanged: (status) {});
   bool _isV2rayInitialized = false;
@@ -219,6 +221,9 @@ class ServerController extends GetxController {
     if (freshList != null && freshList.isNotEmpty) {
       serverData.assignAll(freshList);
       filteredServerData.assignAll(serverData);
+      final now = DateTime.now();
+      lastSyncTime.value = "${now.hour.toString().padLeft(2, '0')}:${now.minute.toString().padLeft(2, '0')}";
+      lastSyncSource.value = sourceUsed;
 
       try {
         SharedPreferences prefs = await SharedPreferences.getInstance();
@@ -228,14 +233,19 @@ class ServerController extends GetxController {
       }
 
       if (showToastOnResult) {
-        Fluttertoast.showToast(msg: "Updated ${freshList.length} servers ($sourceUsed)");
+        Fluttertoast.showToast(msg: "Updated ${freshList.length} servers (Synced at ${lastSyncTime.value})");
       }
     } else {
       if (serverData.isEmpty) {
         await loadCachedOrFallbackServers();
       }
+      final now = DateTime.now();
+      if (lastSyncTime.value.isEmpty) {
+        lastSyncTime.value = "${now.hour.toString().padLeft(2, '0')}:${now.minute.toString().padLeft(2, '0')}";
+        lastSyncSource.value = "Local DB";
+      }
       if (showToastOnResult) {
-        Fluttertoast.showToast(msg: "Offline mode: loaded ${serverData.length} servers");
+        Fluttertoast.showToast(msg: "Loaded ${serverData.length} servers (${lastSyncSource.value})");
       }
     }
 
@@ -243,7 +253,7 @@ class ServerController extends GetxController {
     update();
   }
 
-  // Ping a single server using official Google connectivity check URL
+  // Ping a single server using official Google connectivity check URL (with strict 2.5s hard timeout)
   Future<int> pingServer(String id, String configUrl) async {
     try {
       await _ensureInit();
@@ -258,19 +268,21 @@ class ServerController extends GetxController {
       int delay = await _v2ray.getServerDelay(
         config: fullConfig,
         url: 'http://www.gstatic.com/generate_204',
+      ).timeout(
+        const Duration(milliseconds: 2500),
+        onTimeout: () => -1,
       );
       pingMap[id] = delay;
-      update();
+      update(); // Real-time UI update per server
       return delay;
-    } catch (e) {
-      print('Ping error for $id: $e');
+    } catch (_) {
       pingMap[id] = -1;
       update();
       return -1;
     }
   }
 
-  // Ping all servers with high-speed parallel batching (4 concurrent connections)
+  // Ping all servers with high-speed parallel execution (like v2rayNG Real Delay test)
   Future<void> pingAllServers() async {
     if (isPinging.value) return;
     isPinging.value = true;
@@ -283,15 +295,12 @@ class ServerController extends GetxController {
         return id.isNotEmpty && config.isNotEmpty;
       }).toList();
 
-      const batchSize = 4;
-      for (int i = 0; i < validServers.length; i += batchSize) {
-        final batch = validServers.skip(i).take(batchSize).toList();
-        await Future.wait(batch.map((server) {
-          final id = (server['id'] ?? server['serverName'] ?? '').toString();
-          final config = (server['config'] ?? '').toString();
-          return pingServer(id, config);
-        }));
-      }
+      // Fire all server real-delay pings concurrently with bounded 2.5s timeout each
+      await Future.wait(validServers.map((server) {
+        final id = (server['id'] ?? server['serverName'] ?? '').toString();
+        final config = (server['config'] ?? '').toString();
+        return pingServer(id, config);
+      }));
     } finally {
       isPinging.value = false;
       update();
