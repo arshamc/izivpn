@@ -928,26 +928,6 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
                               ),
                             ),
                           ),
-                                            children: [
-                                              const Icon(
-                                                Icons.power_settings_new_rounded,
-                                                color: Colors.white,
-                                                size: 22,
-                                              ),
-                                              SizedBox(width: 8.w),
-                                              Text(
-                                                'Tap to Connect',
-                                                style: TextStyle(
-                                                  color: Colors.white,
-                                                  fontSize: 16.sp,
-                                                  fontWeight: FontWeight.w800,
-                                                ),
-                                              ),
-                                            ],
-                                          ),
-                              ),
-                            ),
-                          ),
                         ],
                       ),
                     ),
