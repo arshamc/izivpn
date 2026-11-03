@@ -34,14 +34,20 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
 
   bool _isUserConnecting = false;
   Timer? _connectTimeoutTimer;
+  String _previousV2rayState = "DISCONNECTED";
 
   late final FlutterV2ray flutterV2ray = FlutterV2ray(
     onStatusChanged: (status) {
+      final oldState = _previousV2rayState;
+      _previousV2rayState = status.state;
       v2rayStatus.value = status;
       if (status.state == "CONNECTED") {
         _isUserConnecting = false;
         _connectTimeoutTimer?.cancel();
-        _handlePostConnectionAdFlow();
+        // Guard against infinite loop: trigger post-connection ad flow ONLY once on transition to CONNECTED
+        if (oldState != "CONNECTED") {
+          _handlePostConnectionAdFlow();
+        }
       } else if (status.state == "DISCONNECTED") {
         _isUserConnecting = false;
         _isFinalizingTunnel = false;

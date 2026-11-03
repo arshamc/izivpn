@@ -24,29 +24,34 @@ class ServerController extends GetxController {
 
   // Censorship-resistant server list endpoints
   final List<String> _serverEndpoints = [
-    // 0. Live Admin Dashboard Tunnel (Active from developer's machine)
+    // 0. Primary CDN mirror: jsDelivr (instant <200ms & widely accessible in Iran)
+    'https://cdn.jsdelivr.net/gh/arshamc/izivpn@main/servers.json',
+    // 1. Fastly CDN mirror
+    'https://fastly.jsdelivr.net/gh/arshamc/izivpn@main/servers.json',
+    // 2. GCore CDN mirror
+    'https://gcore.jsdelivr.net/gh/arshamc/izivpn@main/servers.json',
+    // 3. Raw GitHub mirror
+    'https://raw.githubusercontent.com/arshamc/izivpn/main/servers.json',
+    // 4. Live Admin Dashboard Tunnel (Active from developer's machine)
     'https://vast-peas-beam.loca.lt/api/v1/servers',
-    // 1. Localhost aliases (Android emulator, LAN, USB cable via adb reverse)
+    // 5. Localhost aliases (Android emulator, LAN, USB cable via adb reverse)
     'http://10.0.2.2:3000/api/v1/servers',
     'http://localhost:3000/api/v1/servers',
-    // 2. Primary CDN mirror: jsDelivr (very fast & widely accessible in Iran)
-    'https://cdn.jsdelivr.net/gh/arshamc/izivpn@main/servers.json',
-    // 3. Fastly CDN mirror
-    'https://fastly.jsdelivr.net/gh/arshamc/izivpn@main/servers.json',
-    // 4. GCore CDN mirror
-    'https://gcore.jsdelivr.net/gh/arshamc/izivpn@main/servers.json',
-    // 5. Raw GitHub mirror
-    'https://raw.githubusercontent.com/arshamc/izivpn/main/servers.json',
   ];
 
   // Remote config endpoints (AdMob, maintenance, announcements)
   final List<String> _configEndpoints = [
+    // 0. Primary CDN mirror
+    'https://cdn.jsdelivr.net/gh/arshamc/izivpn@main/app_config.json',
+    // 1. Fastly CDN mirror
+    'https://fastly.jsdelivr.net/gh/arshamc/izivpn@main/app_config.json',
+    // 2. Raw GitHub mirror
+    'https://raw.githubusercontent.com/arshamc/izivpn/main/app_config.json',
+    // 3. Live Admin Dashboard Tunnel
     'https://vast-peas-beam.loca.lt/api/v1/config',
+    // 4. Localhost aliases
     'http://10.0.2.2:3000/api/v1/config',
     'http://localhost:3000/api/v1/config',
-    'https://cdn.jsdelivr.net/gh/arshamc/izivpn@main/app_config.json',
-    'https://fastly.jsdelivr.net/gh/arshamc/izivpn@main/app_config.json',
-    'https://raw.githubusercontent.com/arshamc/izivpn/main/app_config.json',
   ];
 
   // Config URL sanitizer (fixes percent-encoded base64 padding in Shadowsocks and whitespace)
