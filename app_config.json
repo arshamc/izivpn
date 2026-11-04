@@ -25,7 +25,7 @@
     "forceUpdate": false,
     "updateUrl": "https://github.com/arshamc/izivpn/releases",
     "updateMessage": "نسخه جدید izi vpn با سرعت پایدارتر و تونل‌های قدرتمند آماده شد. لطفاً اپلیکیشن را ارتقا دهید.",
-    "privacyPolicyUrl": "https://policies.google.com/privacy",
+    "privacyPolicyUrl": "https://arshamc.github.io/izivpn/",
     "telegramSupportUrl": "https://t.me/izivpn_support",
     "telegramChannelUrl": "https://t.me/izivpn_official"
   },
