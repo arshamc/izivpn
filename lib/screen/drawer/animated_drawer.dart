@@ -368,7 +368,7 @@ class _SettingsDrawerContentState extends State<SettingsDrawerContent> {
                             color: Color(0xFF94A3B8),
                           ),
                           onTap: () async {
-                            final uri = Uri.parse('https://policies.google.com/privacy');
+                            final uri = Uri.parse('https://arshamc.github.io/izivpn/');
                             if (await canLaunchUrl(uri)) launchUrl(uri);
                           },
                         ),
