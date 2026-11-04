@@ -190,9 +190,148 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
     if (prefs.getBool('autoConnect') == true) {
       await prefs.setBool('autoConnect', false);
       Future.delayed(const Duration(milliseconds: 350), () {
-        _startVpnConnection();
+        _checkDisclosureAndConnect();
       });
     }
+  }
+
+  Future<void> _checkDisclosureAndConnect() async {
+    final prefs = await SharedPreferences.getInstance();
+    final accepted = prefs.getBool('hasAcceptedVpnDisclosure') ?? false;
+    if (!accepted) {
+      if (!mounted) return;
+      _showVpnDisclosureDialog();
+    } else {
+      await _startVpnConnection();
+    }
+  }
+
+  void _showVpnDisclosureDialog() {
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (ctx) {
+        return Dialog(
+          backgroundColor: Colors.transparent,
+          insetPadding: EdgeInsets.symmetric(horizontal: 20.w),
+          child: FrostedCard(
+            padding: EdgeInsets.fromLTRB(20.w, 24.h, 20.w, 20.h),
+            borderRadius: 24.r,
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Container(
+                  width: 52.w,
+                  height: 52.w,
+                  decoration: BoxDecoration(
+                    color: AppColors.brandCoral.withOpacity(0.15),
+                    shape: BoxShape.circle,
+                    border: Border.all(
+                      color: AppColors.brandCoral,
+                      width: 1.5,
+                    ),
+                  ),
+                  child: Icon(
+                    Icons.security_rounded,
+                    color: AppColors.brandCoral,
+                    size: 28.sp,
+                  ),
+                ),
+                SizedBox(height: 16.h),
+                Text(
+                  'VPN Service & Privacy Disclosure',
+                  style: TextStyle(
+                    fontSize: 17.sp,
+                    fontWeight: FontWeight.w800,
+                    color: AppColors.headingText(ctx),
+                  ),
+                  textAlign: TextAlign.center,
+                ),
+                SizedBox(height: 14.h),
+                Text(
+                  'این اپلیکیشن برای رمزنگاری ترافیک شبکه شما و ایجاد یک تونل ارتباطی امن (VLESS/Xray) به سرورهای راه دور، از VpnService اندروید استفاده می‌کند. ما هیچگونه لاگ، تاریخچه یا اطلاعات ترافیک شبکه شما را ذخیره، مانیتور یا واگذار نمی‌کنیم.\n\n'
+                  'To protect your network traffic, this app uses Android\'s VpnService to establish an encrypted tunnel to our secure remote servers. We do not collect, log, or share your browsing history or personal traffic data.',
+                  style: TextStyle(
+                    fontSize: 12.5.sp,
+                    height: 1.5,
+                    color: AppColors.subtitleText(ctx),
+                  ),
+                  textAlign: TextAlign.justify,
+                ),
+                SizedBox(height: 22.h),
+                Row(
+                  children: [
+                    Expanded(
+                      child: GestureDetector(
+                        onTap: () {
+                          Navigator.of(ctx).pop();
+                        },
+                        child: Container(
+                          height: 46.h,
+                          decoration: BoxDecoration(
+                            color: Colors.black.withOpacity(0.08),
+                            borderRadius: BorderRadius.circular(14.r),
+                          ),
+                          child: Center(
+                            child: Text(
+                              'Cancel',
+                              style: TextStyle(
+                                fontSize: 14.sp,
+                                fontWeight: FontWeight.w700,
+                                color: AppColors.headingText(ctx),
+                              ),
+                            ),
+                          ),
+                        ),
+                      ),
+                    ),
+                    SizedBox(width: 12.w),
+                    Expanded(
+                      child: GestureDetector(
+                        onTap: () async {
+                          final prefs = await SharedPreferences.getInstance();
+                          await prefs.setBool('hasAcceptedVpnDisclosure', true);
+                          if (mounted && Navigator.canPop(ctx)) {
+                            Navigator.of(ctx).pop();
+                          }
+                          await _startVpnConnection();
+                        },
+                        child: Container(
+                          height: 46.h,
+                          decoration: BoxDecoration(
+                            gradient: const LinearGradient(
+                              colors: [AppColors.brandCoral, Color(0xFFFF7A6A)],
+                            ),
+                            borderRadius: BorderRadius.circular(14.r),
+                            boxShadow: [
+                              BoxShadow(
+                                color: AppColors.brandCoral.withOpacity(0.35),
+                                blurRadius: 10,
+                                offset: const Offset(0, 3),
+                              ),
+                            ],
+                          ),
+                          child: Center(
+                            child: Text(
+                              'Agree & Continue',
+                              style: TextStyle(
+                                fontSize: 14.sp,
+                                fontWeight: FontWeight.w800,
+                                color: Colors.white,
+                              ),
+                            ),
+                          ),
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ],
+            ),
+          ),
+        );
+      },
+    );
   }
 
   Future<void> _startVpnConnection() async {
@@ -202,17 +341,18 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
           _isUserConnecting = true;
         });
 
-        // 14-second hard safety timeout for flight connecting animation
+        // Exact 10-second server connection timeout (Scenario A & B: AdConfig.tunnelTimeoutSec)
         _connectTimeoutTimer?.cancel();
-        _connectTimeoutTimer = Timer(const Duration(seconds: 14), () {
+        _connectTimeoutTimer = Timer(Duration(seconds: AdConfig.tunnelTimeoutSec), () {
           if (_isUserConnecting && v2rayStatus.value.state != "CONNECTED") {
             if (mounted) {
               setState(() {
                 _isUserConnecting = false;
+                _isFinalizingTunnel = false;
               });
               flutterV2ray.stopV2Ray();
               Fluttertoast.showToast(
-                msg: "Connection timed out. Please try another server.",
+                msg: "اتصال به سرور ناموفق بود. لطفاً دوباره تلاش کنید.",
                 toastLength: Toast.LENGTH_LONG,
               );
             }
@@ -272,6 +412,17 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
   }
 
   Future<void> _handlePostConnectionAdFlow() async {
+    // SCENARIO A: Ads Are Disabled / Not Ready (Zero Initialization & Zero Wait)
+    if (!AdConfig.isAdReadyAndActive) {
+      if (mounted) {
+        setState(() {
+          _isFinalizingTunnel = false;
+        });
+      }
+      return;
+    }
+
+    // SCENARIO B: Ads Are Active
     setState(() {
       _isFinalizingTunnel = true;
     });
@@ -291,7 +442,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
       return;
     }
 
-    // 3. Load & Show Interstitial with 5-second hard timeout
+    // 3. Load & Show Interstitial with 20-second hard timeout
     await AdManager.instance.showPostConnectionInterstitial(
       context: context,
       onComplete: () {
@@ -925,7 +1076,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
                                 flutterV2ray.stopV2Ray();
                                 if (mounted) setState(() {});
                               } else {
-                                await _startVpnConnection();
+                                await _checkDisclosureAndConnect();
                               }
                             },
                             child: Container(

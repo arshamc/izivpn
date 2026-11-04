@@ -99,17 +99,17 @@ class ServerController extends GetxController {
       }
       final List<dynamic> rules = routing['rules'] as List<dynamic>;
 
-      // Dedicated AdMob Routing Rule (prioritized at the top of the rules array)
+      // Dedicated AdMob Routing Rule (explicit domain matching to avoid geosite.dat dependency)
       final admobRule = <String, dynamic>{
         'type': 'field',
         'outboundTag': proxyTag,
         'domain': [
-          'geosite:google-ads',
           'domain:googlesyndication.com',
           'domain:doubleclick.net',
           'domain:admob.com',
-          'domain:googleads.g.doubleclick.net',
-          'domain:pagead2.googlesyndication.com',
+          'domain:googleadservices.com',
+          'domain:imasdk.googleapis.com',
+          'domain:googletagservices.com',
         ],
       };
 
@@ -214,16 +214,29 @@ class ServerController extends GetxController {
         } catch (_) {}
       }
       dynamic parsed = jsonDecode(trimmed);
-      if (parsed is Map && parsed['data'] is List) {
-        final list = (parsed['data'] as List).map((s) {
-          if (s is Map) {
-            if (s['flag'] == null && s['countryCode'] != null) {
+      if (parsed is Map) {
+        // Optional top-level ad_config ingestion
+        if (parsed.containsKey('ad_config') && parsed['ad_config'] is Map) {
+          AdConfig.updateFromMap(Map<String, dynamic>.from(parsed['ad_config']));
+        }
+        if (parsed.containsKey('servers') && parsed['servers'] is List) {
+          final list = (parsed['servers'] as List).map((s) {
+            if (s is Map && s['flag'] == null && s['countryCode'] != null) {
               s['flag'] = s['countryCode'];
             }
-          }
-          return s;
-        }).toList();
-        if (list.isNotEmpty) return list;
+            return s;
+          }).toList();
+          if (list.isNotEmpty) return list;
+        }
+        if (parsed['data'] is List) {
+          final list = (parsed['data'] as List).map((s) {
+            if (s is Map && s['flag'] == null && s['countryCode'] != null) {
+              s['flag'] = s['countryCode'];
+            }
+            return s;
+          }).toList();
+          if (list.isNotEmpty) return list;
+        }
       }
       if (parsed is List && parsed.isNotEmpty) {
         return parsed;

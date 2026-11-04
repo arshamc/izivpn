@@ -225,119 +225,121 @@ class _SettingsDrawerContentState extends State<SettingsDrawerContent> {
                   ),
                   SizedBox(height: 10.h),
 
-                  // 🧪 Developer Ad Test Panel
-                  FrostedCard(
-                    padding: EdgeInsets.symmetric(horizontal: 16.w, vertical: 12.h),
-                    borderRadius: 18.r,
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Row(
-                          children: [
-                            Icon(
-                              Icons.science_outlined,
-                              color: const Color(0xFFFFB74D),
-                              size: 20.sp,
-                            ),
-                            SizedBox(width: 8.w),
-                            Text(
-                              '🧪 Developer Ad Test Panel',
-                              style: TextStyle(
-                                fontSize: 14.sp,
-                                fontWeight: FontWeight.w800,
-                                color: AppColors.headingText(context),
+                  if (AdConfig.isTestMode) ...[
+                    // 🧪 Developer Ad Test Panel (Only visible during developer testing)
+                    FrostedCard(
+                      padding: EdgeInsets.symmetric(horizontal: 16.w, vertical: 12.h),
+                      borderRadius: 18.r,
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Row(
+                            children: [
+                              Icon(
+                                Icons.science_outlined,
+                                color: const Color(0xFFFFB74D),
+                                size: 20.sp,
                               ),
-                            ),
-                            const Spacer(),
-                            Container(
-                              padding: EdgeInsets.symmetric(horizontal: 8.w, vertical: 2.h),
-                              decoration: BoxDecoration(
-                                color: AdConfig.isTestMode
-                                    ? const Color(0xFFE0F2FE)
-                                    : const Color(0xFFDCFCE7),
-                                borderRadius: BorderRadius.circular(10.r),
-                              ),
-                              child: Text(
-                                AdConfig.isTestMode ? 'Test IDs' : 'Production',
+                              SizedBox(width: 8.w),
+                              Text(
+                                '🧪 Developer Ad Test Panel',
                                 style: TextStyle(
-                                  fontSize: 10.sp,
-                                  fontWeight: FontWeight.w700,
-                                  color: AdConfig.isTestMode
-                                      ? const Color(0xFF0369A1)
-                                      : const Color(0xFF15803D),
+                                  fontSize: 14.sp,
+                                  fontWeight: FontWeight.w800,
+                                  color: AppColors.headingText(context),
                                 ),
                               ),
-                            ),
-                          ],
-                        ),
-                        SizedBox(height: 8.h),
-                        Text(
-                          'Bypass cooldowns and reset frequency caps for rapid testing without AdMob IVT account suspensions.',
-                          style: TextStyle(
-                            fontSize: 11.sp,
-                            color: AppColors.subtitleText(context),
+                              const Spacer(),
+                              Container(
+                                padding: EdgeInsets.symmetric(horizontal: 8.w, vertical: 2.h),
+                                decoration: BoxDecoration(
+                                  color: AdConfig.isTestMode
+                                      ? const Color(0xFFE0F2FE)
+                                      : const Color(0xFFDCFCE7),
+                                  borderRadius: BorderRadius.circular(10.r),
+                                ),
+                                child: Text(
+                                  AdConfig.isTestMode ? 'Test IDs' : 'Production',
+                                  style: TextStyle(
+                                    fontSize: 10.sp,
+                                    fontWeight: FontWeight.w700,
+                                    color: AdConfig.isTestMode
+                                        ? const Color(0xFF0369A1)
+                                        : const Color(0xFF15803D),
+                                  ),
+                                ),
+                              ),
+                            ],
                           ),
-                        ),
-                        SizedBox(height: 10.h),
-                        Row(
-                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                          children: [
-                            Text(
-                              'Bypass Ad Cooldowns',
-                              style: TextStyle(
-                                fontSize: 13.sp,
-                                fontWeight: FontWeight.w700,
-                                color: AppColors.headingText(context),
-                              ),
+                          SizedBox(height: 8.h),
+                          Text(
+                            'Bypass cooldowns and reset frequency caps for rapid testing without AdMob IVT account suspensions.',
+                            style: TextStyle(
+                              fontSize: 11.sp,
+                              color: AppColors.subtitleText(context),
                             ),
-                            Switch(
-                              value: AdManager.instance.bypassCooldowns,
-                              activeColor: Colors.white,
-                              activeTrackColor: AppColors.brandCoral,
-                              onChanged: (val) async {
-                                await AdManager.instance.setBypassCooldowns(val);
-                                setState(() {});
-                                Fluttertoast.showToast(
-                                  msg: val ? "Ad cooldowns BYPASSED" : "Normal 3h cooldown ACTIVE",
-                                );
-                              },
-                            ),
-                          ],
-                        ),
-                        SizedBox(height: 6.h),
-                        GestureDetector(
-                          onTap: () async {
-                            await AdManager.instance.resetVipPass();
-                            Fluttertoast.showToast(msg: "VIP timers and ad frequency reset");
-                            if (mounted) setState(() {});
-                          },
-                          child: Container(
-                            width: double.infinity,
-                            padding: EdgeInsets.symmetric(vertical: 8.h),
-                            decoration: BoxDecoration(
-                              color: Colors.white.withOpacity(0.12),
-                              borderRadius: BorderRadius.circular(12.r),
-                              border: Border.all(
-                                color: Colors.white.withOpacity(0.2),
-                                width: 1,
-                              ),
-                            ),
-                            child: Center(
-                              child: Text(
-                                '🔄 Reset VIP Timers & Counters',
+                          ),
+                          SizedBox(height: 10.h),
+                          Row(
+                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                            children: [
+                              Text(
+                                'Bypass Ad Cooldowns',
                                 style: TextStyle(
-                                  fontSize: 12.sp,
+                                  fontSize: 13.sp,
                                   fontWeight: FontWeight.w700,
                                   color: AppColors.headingText(context),
                                 ),
                               ),
+                              Switch(
+                                value: AdManager.instance.bypassCooldowns,
+                                activeColor: Colors.white,
+                                activeTrackColor: AppColors.brandCoral,
+                                onChanged: (val) async {
+                                  await AdManager.instance.setBypassCooldowns(val);
+                                  setState(() {});
+                                  Fluttertoast.showToast(
+                                    msg: val ? "Ad cooldowns BYPASSED" : "Normal 3h cooldown ACTIVE",
+                                  );
+                                },
+                              ),
+                            ],
+                          ),
+                          SizedBox(height: 6.h),
+                          GestureDetector(
+                            onTap: () async {
+                              await AdManager.instance.resetVipPass();
+                              Fluttertoast.showToast(msg: "VIP timers and ad frequency reset");
+                              if (mounted) setState(() {});
+                            },
+                            child: Container(
+                              width: double.infinity,
+                              padding: EdgeInsets.symmetric(vertical: 8.h),
+                              decoration: BoxDecoration(
+                                color: Colors.white.withOpacity(0.12),
+                                borderRadius: BorderRadius.circular(12.r),
+                                border: Border.all(
+                                  color: Colors.white.withOpacity(0.2),
+                                  width: 1,
+                                ),
+                              ),
+                              child: Center(
+                                child: Text(
+                                  '🔄 Reset VIP Timers & Counters',
+                                  style: TextStyle(
+                                    fontSize: 12.sp,
+                                    fontWeight: FontWeight.w700,
+                                    color: AppColors.headingText(context),
+                                  ),
+                                ),
+                              ),
                             ),
                           ),
-                        ),
-                      ],
+                        ],
+                      ),
                     ),
-                  ),
-                  SizedBox(height: 20.h),
+                    SizedBox(height: 20.h),
+                  ],
 
                   // Google Play Compliance Grouped Card
                   FrostedCard(

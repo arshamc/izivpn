@@ -26,4 +26,5 @@ const decipher = crypto.createDecipheriv('aes-256-cbc', KEY, IV);
 let decrypted = decipher.update(encrypted, 'base64', 'utf8');
 decrypted += decipher.final('utf8');
 const parsed = JSON.parse(decrypted);
-console.log('✅ Self-test verified: successfully decrypted ' + parsed.length + ' servers.');
+const count = Array.isArray(parsed) ? parsed.length : (parsed.servers ? parsed.servers.length : 0);
+console.log('✅ Self-test verified: successfully decrypted ' + count + ' servers.');

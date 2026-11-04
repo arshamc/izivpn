@@ -22,30 +22,62 @@ class AdConfig {
   static String prodIosInterstitial = '';
   static String prodIosRewarded = '';
 
-  // Remote Anti-Ban Policies
+  // Remote Dynamic Anti-Ban & Timeouts Policies
   static bool adsEnabled = true;
+  static int tunnelTimeoutSec = 10; // Exactly 10-second tunnel connection timeout
+  static int adLoadTimeoutSec = 20; // 20-second hard timeout for ad loading
   static int maxInterstitials24h = 2; // Strict frequency cap: max 2 per 24h
   static int cooldownMinutes = 180; // 3 hours cooldown
-  static int interstitialTimeoutSec = 5; // 5-second hard timeout
-  static int rewardedTimeoutSec = 8; // 8-second timeout
   static int vipDurationHours = 2; // 2-hour VIP unlock
 
-  static void updateFromMap(Map<String, dynamic> data) {
-    if (data.containsKey('enabled')) adsEnabled = data['enabled'] == true;
-    if (data.containsKey('isTestMode')) isTestMode = data['isTestMode'] == true;
-    if (data.containsKey('interstitialCap24h')) maxInterstitials24h = (data['interstitialCap24h'] as num).toInt();
-    if (data.containsKey('interstitialCooldownMin')) cooldownMinutes = (data['interstitialCooldownMin'] as num).toInt();
-    if (data.containsKey('interstitialTimeoutSec')) interstitialTimeoutSec = (data['interstitialTimeoutSec'] as num).toInt();
-    if (data.containsKey('rewardedTimeoutSec')) rewardedTimeoutSec = (data['rewardedTimeoutSec'] as num).toInt();
-    if (data.containsKey('rewardedVipDurationHours')) vipDurationHours = (data['rewardedVipDurationHours'] as num).toInt();
+  /// Scenario A vs Scenario B detector:
+  /// True only when ads are enabled AND either isTestMode=true OR production IDs are present
+  static bool get isAdReadyAndActive {
+    if (!adsEnabled) return false;
+    if (isTestMode) return true;
+    return prodAndroidInterstitial.trim().isNotEmpty && prodAndroidRewarded.trim().isNotEmpty;
+  }
 
-    final prodInter = data['prodAdUnitInterstitial']?.toString();
-    if (prodInter != null && prodInter.trim().isNotEmpty) {
-      prodAndroidInterstitial = prodInter.trim();
+  static void updateFromMap(Map<String, dynamic> data) {
+    if (data.containsKey('ads_enabled')) adsEnabled = data['ads_enabled'] == true;
+    if (data.containsKey('enabled')) adsEnabled = data['enabled'] == true;
+
+    if (data.containsKey('is_test_mode')) isTestMode = data['is_test_mode'] == true;
+    if (data.containsKey('isTestMode')) isTestMode = data['isTestMode'] == true;
+
+    if (data.containsKey('tunnel_timeout_sec')) {
+      tunnelTimeoutSec = (data['tunnel_timeout_sec'] as num).toInt();
     }
-    final prodRew = data['prodAdUnitRewarded']?.toString();
-    if (prodRew != null && prodRew.trim().isNotEmpty) {
-      prodAndroidRewarded = prodRew.trim();
+    if (data.containsKey('ad_load_timeout_sec')) {
+      adLoadTimeoutSec = (data['ad_load_timeout_sec'] as num).toInt();
+    } else if (data.containsKey('interstitialTimeoutSec')) {
+      adLoadTimeoutSec = (data['interstitialTimeoutSec'] as num).toInt();
+    }
+
+    if (data.containsKey('max_daily_interstitials')) {
+      maxInterstitials24h = (data['max_daily_interstitials'] as num).toInt();
+    } else if (data.containsKey('interstitialCap24h')) {
+      maxInterstitials24h = (data['interstitialCap24h'] as num).toInt();
+    }
+
+    if (data.containsKey('cooldown_hours')) {
+      cooldownMinutes = ((data['cooldown_hours'] as num).toInt()) * 60;
+    } else if (data.containsKey('interstitialCooldownMin')) {
+      cooldownMinutes = (data['interstitialCooldownMin'] as num).toInt();
+    }
+
+    if (data.containsKey('rewardedVipDurationHours')) {
+      vipDurationHours = (data['rewardedVipDurationHours'] as num).toInt();
+    }
+
+    final interId = (data['interstitial_id'] ?? data['prodAdUnitInterstitial'])?.toString();
+    if (interId != null && interId.trim().isNotEmpty) {
+      prodAndroidInterstitial = interId.trim();
+    }
+
+    final rewId = (data['rewarded_id'] ?? data['prodAdUnitRewarded'])?.toString();
+    if (rewId != null && rewId.trim().isNotEmpty) {
+      prodAndroidRewarded = rewId.trim();
     }
   }
 }
@@ -151,6 +183,8 @@ class AdManager {
 
   // --- AdMob Anti-Ban & Frequency Capping ---
   Future<bool> canShowPostConnectionInterstitial() async {
+    // SCENARIO A: If ads are disabled or IDs are empty in production -> ZERO wait!
+    if (!AdConfig.isAdReadyAndActive) return false;
     if (bypassCooldowns) return true; // Developer test panel override
     if (!AdConfig.adsEnabled) return false;
     if (justWatchedRewarded) {
@@ -212,8 +246,8 @@ class AdManager {
       }
     }
 
-    // Set hard 5-second timeout
-    _activeTimeoutTimer = Timer(Duration(seconds: AdConfig.interstitialTimeoutSec), () {
+    // Set dynamic hard timeout (Scenario B: 20 seconds default)
+    _activeTimeoutTimer = Timer(Duration(seconds: AdConfig.adLoadTimeoutSec), () {
       finishOnce();
     });
 

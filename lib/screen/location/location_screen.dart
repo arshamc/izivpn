@@ -66,7 +66,8 @@ class _LocationScreenState extends State<LocationScreen> {
 
   void _onServerCardTapped(Map<String, dynamic> server) async {
     final isVip = server['vip'] == true || server['isVip'] == true;
-    if (isVip && !_isVipActive) {
+    // Scenario A: If ads are not active or disabled, treat locked VIP nodes as standard high-speed servers
+    if (isVip && !_isVipActive && AdConfig.isAdReadyAndActive) {
       _showVipUnlockBottomSheet(context, server);
     } else {
       await _selectServer(server, autoConnect: true);
@@ -694,7 +695,11 @@ class _LocationScreenState extends State<LocationScreen> {
                                                     ),
                                                     SizedBox(width: 3.w),
                                                     Text(
-                                                      _isVipActive ? '⚡ VIP Active' : '🎬 Watch Ad • Unlock 2h VIP',
+                                                      _isVipActive
+                                                          ? '⚡ VIP Active'
+                                                          : (AdConfig.isAdReadyAndActive
+                                                              ? '🎬 Watch Ad • Unlock 2h VIP'
+                                                              : '⚡ High-Speed VIP'),
                                                       style: TextStyle(
                                                         color: Colors.white,
                                                         fontSize: 9.5.sp,
