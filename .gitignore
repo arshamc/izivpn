@@ -41,3 +41,8 @@ app.*.map.json
 /android/app/debug
 /android/app/profile
 /android/app/release
+
+# Raw server configs (Security: do not push unencrypted configs)
+servers_raw.json
+tool/servers_raw.json
+

@@ -1,22 +1,22 @@
 import 'dart:async';
 import 'dart:io';
+import 'dart:math';
 import 'package:flutter/material.dart';
 import 'package:google_mobile_ads/google_mobile_ads.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 class AdConfig {
-  static bool isTestMode = true; // Safe testing by default to protect developer account
+  static bool isTestMode = true; // Safe developer test mode by default
 
   // Official Google AdMob Test Ad Unit IDs
   static const String testAndroidAppId = 'ca-app-pub-3940256099942544~3347511713';
   static const String testAndroidInterstitial = 'ca-app-pub-3940256099942544/1033173712';
   static const String testAndroidRewarded = 'ca-app-pub-3940256099942544/5224354917';
-  static const String testAndroidBanner = 'ca-app-pub-3940256099942544/6300978111';
 
   static const String testIosInterstitial = 'ca-app-pub-3940256099942544/4411468910';
   static const String testIosRewarded = 'ca-app-pub-3940256099942544/1712485313';
 
-  // Production Placeholders (configured remotely from dashboard)
+  // Production Placeholders (configured remotely from dashboard/CDN config)
   static String prodAndroidInterstitial = '';
   static String prodAndroidRewarded = '';
   static String prodIosInterstitial = '';
@@ -24,12 +24,11 @@ class AdConfig {
 
   // Remote Anti-Ban Policies
   static bool adsEnabled = true;
-  static int maxInterstitials24h = 2;
+  static int maxInterstitials24h = 2; // Strict frequency cap: max 2 per 24h
   static int cooldownMinutes = 180; // 3 hours cooldown
-  static int interstitialTimeoutSec = 5;
-  static int rewardedTimeoutSec = 8;
-  static int vipDurationHours = 2;
-  static int courtesyPassMin = 30;
+  static int interstitialTimeoutSec = 5; // 5-second hard timeout
+  static int rewardedTimeoutSec = 8; // 8-second timeout
+  static int vipDurationHours = 2; // 2-hour VIP unlock
 
   static void updateFromMap(Map<String, dynamic> data) {
     if (data.containsKey('enabled')) adsEnabled = data['enabled'] == true;
@@ -39,7 +38,6 @@ class AdConfig {
     if (data.containsKey('interstitialTimeoutSec')) interstitialTimeoutSec = (data['interstitialTimeoutSec'] as num).toInt();
     if (data.containsKey('rewardedTimeoutSec')) rewardedTimeoutSec = (data['rewardedTimeoutSec'] as num).toInt();
     if (data.containsKey('rewardedVipDurationHours')) vipDurationHours = (data['rewardedVipDurationHours'] as num).toInt();
-    if (data.containsKey('courtesyPassMin')) courtesyPassMin = (data['courtesyPassMin'] as num).toInt();
 
     final prodInter = data['prodAdUnitInterstitial']?.toString();
     if (prodInter != null && prodInter.trim().isNotEmpty) {
@@ -54,16 +52,55 @@ class AdConfig {
 
 class AdManager {
   static final AdManager instance = AdManager._internal();
-  AdManager._internal();
+  AdManager._internal() {
+    _loadBypassSettings();
+  }
 
   bool isAppInForeground = true;
   bool justWatchedRewarded = false;
+  bool bypassCooldowns = false;
+
   DateTime? _lastInterstitialShownTime;
   int _dailyInterstitialCount = 0;
   DateTime? _dailyCountResetDate;
 
+  // Active ad reference for cleanup on lifecycle paused
+  InterstitialAd? _activeInterstitialAd;
+  RewardedAd? _activeRewardedAd;
+  Timer? _activeTimeoutTimer;
+
+  static const String _prefVipUntil = 'vip_unlock_until_millis';
+  static const String _prefBypassCooldowns = 'dev_bypass_ad_cooldowns';
+
+  Future<void> _loadBypassSettings() async {
+    final prefs = await SharedPreferences.getInstance();
+    bypassCooldowns = prefs.getBool(_prefBypassCooldowns) ?? false;
+  }
+
+  Future<void> setBypassCooldowns(bool value) async {
+    bypassCooldowns = value;
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setBool(_prefBypassCooldowns, value);
+  }
+
   void setAppLifecycleState(AppLifecycleState state) {
     isAppInForeground = (state == AppLifecycleState.resumed);
+    if (!isAppInForeground) {
+      abortPendingAds();
+    }
+  }
+
+  void abortPendingAds() {
+    _activeTimeoutTimer?.cancel();
+    _activeTimeoutTimer = null;
+    try {
+      _activeInterstitialAd?.dispose();
+    } catch (_) {}
+    _activeInterstitialAd = null;
+    try {
+      _activeRewardedAd?.dispose();
+    } catch (_) {}
+    _activeRewardedAd = null;
   }
 
   String get interstitialAdUnitId {
@@ -81,8 +118,6 @@ class AdManager {
   }
 
   // --- VIP Membership & Timers ---
-  static const String _prefVipUntil = 'vip_unlock_until_millis';
-
   Future<bool> isVipActive() async {
     final prefs = await SharedPreferences.getInstance();
     final until = prefs.getInt(_prefVipUntil);
@@ -116,12 +151,13 @@ class AdManager {
 
   // --- AdMob Anti-Ban & Frequency Capping ---
   Future<bool> canShowPostConnectionInterstitial() async {
+    if (bypassCooldowns) return true; // Developer test panel override
     if (!AdConfig.adsEnabled) return false;
     if (justWatchedRewarded) {
       justWatchedRewarded = false;
-      return false; // VIP rewarded video was just completed -> skip!
+      return false; // Skip if VIP rewarded video was just watched
     }
-    if (await isVipActive()) return false; // Active VIP pass -> 100% ad-free!
+    if (await isVipActive()) return false; // Active VIP pass -> 100% ad-free
 
     final now = DateTime.now();
     if (_dailyCountResetDate == null || now.difference(_dailyCountResetDate!).inHours >= 24) {
@@ -130,13 +166,13 @@ class AdManager {
     }
 
     if (_dailyInterstitialCount >= AdConfig.maxInterstitials24h) {
-      return false; // 24h frequency cap reached
+      return false; // 24h frequency cap reached (max 2)
     }
 
     if (_lastInterstitialShownTime != null) {
       final elapsed = now.difference(_lastInterstitialShownTime!).inMinutes;
       if (elapsed < AdConfig.cooldownMinutes) {
-        return false; // Still within cooldown window
+        return false; // Within 3-hour cooldown window
       }
     }
 
@@ -146,6 +182,13 @@ class AdManager {
   void recordInterstitialShown() {
     _lastInterstitialShownTime = DateTime.now();
     _dailyInterstitialCount++;
+  }
+
+  /// Random Jitter Delay (800ms - 2000ms) after tun0 connects before requesting ad
+  Future<void> applyJitterDelay({int minMs = 800, int maxMs = 2000}) async {
+    final rand = Random();
+    final ms = minMs + rand.nextInt(maxMs - minMs + 1);
+    await Future.delayed(Duration(milliseconds: ms));
   }
 
   // Post-Connection Interstitial with 5s Hard Timeout
@@ -159,18 +202,18 @@ class AdManager {
     }
 
     bool completed = false;
-    Timer? timeoutTimer;
 
     void finishOnce() {
       if (!completed) {
         completed = true;
-        timeoutTimer?.cancel();
+        _activeTimeoutTimer?.cancel();
+        _activeTimeoutTimer = null;
         onComplete();
       }
     }
 
     // Set hard 5-second timeout
-    timeoutTimer = Timer(Duration(seconds: AdConfig.interstitialTimeoutSec), () {
+    _activeTimeoutTimer = Timer(Duration(seconds: AdConfig.interstitialTimeoutSec), () {
       finishOnce();
     });
 
@@ -184,11 +227,14 @@ class AdManager {
               ad.dispose();
               return;
             }
-            timeoutTimer?.cancel();
+            _activeTimeoutTimer?.cancel();
+            _activeTimeoutTimer = null;
+            _activeInterstitialAd = ad;
 
             // Policy compliance: never show if app was backgrounded
             if (!isAppInForeground) {
               ad.dispose();
+              _activeInterstitialAd = null;
               finishOnce();
               return;
             }
@@ -197,10 +243,12 @@ class AdManager {
               onAdDismissedFullScreenContent: (ad) {
                 recordInterstitialShown();
                 ad.dispose();
+                _activeInterstitialAd = null;
                 finishOnce();
               },
               onAdFailedToShowFullScreenContent: (ad, error) {
                 ad.dispose();
+                _activeInterstitialAd = null;
                 finishOnce();
               },
             );
@@ -217,27 +265,26 @@ class AdManager {
     }
   }
 
-  // Rewarded VIP Ad with 8s Hard Timeout and Courtesy Pass Fallback
+  // Rewarded VIP Ad with 8s Hard Timeout
   Future<void> showRewardedVipAd({
     BuildContext? context,
     required Function(bool success, String message) onResult,
   }) async {
     bool earnedReward = false;
     bool completed = false;
-    Timer? timeoutTimer;
 
     void finishOnce(bool success, String message) {
       if (!completed) {
         completed = true;
-        timeoutTimer?.cancel();
+        _activeTimeoutTimer?.cancel();
+        _activeTimeoutTimer = null;
         onResult(success, message);
       }
     }
 
-    // 8s timeout fallback: grant 30-min courtesy pass
-    timeoutTimer = Timer(Duration(seconds: AdConfig.rewardedTimeoutSec), () async {
-      await unlockVipPass(duration: Duration(minutes: AdConfig.courtesyPassMin));
-      finishOnce(true, "Courtesy VIP pass activated for ${AdConfig.courtesyPassMin} minutes!");
+    // Hard 8-second timeout for rewarded video load
+    _activeTimeoutTimer = Timer(Duration(seconds: AdConfig.rewardedTimeoutSec), () {
+      finishOnce(false, "Rewarded ad load timed out. Please try again.");
     });
 
     try {
@@ -250,22 +297,32 @@ class AdManager {
               ad.dispose();
               return;
             }
-            timeoutTimer?.cancel();
+            _activeTimeoutTimer?.cancel();
+            _activeTimeoutTimer = null;
+            _activeRewardedAd = ad;
+
+            if (!isAppInForeground) {
+              ad.dispose();
+              _activeRewardedAd = null;
+              finishOnce(false, "App was sent to background.");
+              return;
+            }
 
             ad.fullScreenContentCallback = FullScreenContentCallback(
               onAdDismissedFullScreenContent: (ad) async {
                 ad.dispose();
+                _activeRewardedAd = null;
                 if (earnedReward) {
                   await unlockVipPass(duration: Duration(hours: AdConfig.vipDurationHours));
                   finishOnce(true, "VIP Pass Activated for ${AdConfig.vipDurationHours} Hours!");
                 } else {
-                  finishOnce(false, "Video was closed before completion.");
+                  finishOnce(false, "VIP connection cancelled — video ad was not completed.");
                 }
               },
               onAdFailedToShowFullScreenContent: (ad, error) async {
                 ad.dispose();
-                await unlockVipPass(duration: Duration(minutes: AdConfig.courtesyPassMin));
-                finishOnce(true, "Courtesy VIP pass activated!");
+                _activeRewardedAd = null;
+                finishOnce(false, "Failed to present rewarded video.");
               },
             );
 
@@ -276,14 +333,12 @@ class AdManager {
             );
           },
           onAdFailedToLoad: (LoadAdError error) async {
-            await unlockVipPass(duration: Duration(minutes: AdConfig.courtesyPassMin));
-            finishOnce(true, "Courtesy VIP pass activated!");
+            finishOnce(false, "Video ad not available at this moment.");
           },
         ),
       );
     } catch (e) {
-      await unlockVipPass(duration: Duration(minutes: AdConfig.courtesyPassMin));
-      finishOnce(true, "Courtesy VIP pass activated!");
+      finishOnce(false, "Error loading rewarded ad: $e");
     }
   }
 }
@@ -292,5 +347,4 @@ class AdManager {
 class AdHelper {
   static String get interstitialAdUnitId => AdManager.instance.interstitialAdUnitId;
   static String get rewardedAdUnitId => AdManager.instance.rewardedAdUnitId;
-  static String get bannerAdUnitId => AdConfig.testAndroidBanner;
 }

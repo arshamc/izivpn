@@ -225,7 +225,7 @@ class _SettingsDrawerContentState extends State<SettingsDrawerContent> {
                   ),
                   SizedBox(height: 10.h),
 
-                  // VIP Pass & AdMob Status Card
+                  // 🧪 Developer Ad Test Panel
                   FrostedCard(
                     padding: EdgeInsets.symmetric(horizontal: 16.w, vertical: 12.h),
                     borderRadius: 18.r,
@@ -235,16 +235,16 @@ class _SettingsDrawerContentState extends State<SettingsDrawerContent> {
                         Row(
                           children: [
                             Icon(
-                              Icons.workspace_premium_rounded,
+                              Icons.science_outlined,
                               color: const Color(0xFFFFB74D),
                               size: 20.sp,
                             ),
                             SizedBox(width: 8.w),
                             Text(
-                              'VIP & Ad Controls',
+                              '🧪 Developer Ad Test Panel',
                               style: TextStyle(
-                                fontSize: 15.sp,
-                                fontWeight: FontWeight.w700,
+                                fontSize: 14.sp,
+                                fontWeight: FontWeight.w800,
                                 color: AppColors.headingText(context),
                               ),
                             ),
@@ -272,17 +272,43 @@ class _SettingsDrawerContentState extends State<SettingsDrawerContent> {
                         ),
                         SizedBox(height: 8.h),
                         Text(
-                          'Google AdMob test IDs are active to safeguard against developer IVT account suspensions.',
+                          'Bypass cooldowns and reset frequency caps for rapid testing without AdMob IVT account suspensions.',
                           style: TextStyle(
                             fontSize: 11.sp,
                             color: AppColors.subtitleText(context),
                           ),
                         ),
                         SizedBox(height: 10.h),
+                        Row(
+                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                          children: [
+                            Text(
+                              'Bypass Ad Cooldowns',
+                              style: TextStyle(
+                                fontSize: 13.sp,
+                                fontWeight: FontWeight.w700,
+                                color: AppColors.headingText(context),
+                              ),
+                            ),
+                            Switch(
+                              value: AdManager.instance.bypassCooldowns,
+                              activeColor: Colors.white,
+                              activeTrackColor: AppColors.brandCoral,
+                              onChanged: (val) async {
+                                await AdManager.instance.setBypassCooldowns(val);
+                                setState(() {});
+                                Fluttertoast.showToast(
+                                  msg: val ? "Ad cooldowns BYPASSED" : "Normal 3h cooldown ACTIVE",
+                                );
+                              },
+                            ),
+                          ],
+                        ),
+                        SizedBox(height: 6.h),
                         GestureDetector(
                           onTap: () async {
                             await AdManager.instance.resetVipPass();
-                            Fluttertoast.showToast(msg: "VIP pass and ad cooldowns reset");
+                            Fluttertoast.showToast(msg: "VIP timers and ad frequency reset");
                             if (mounted) setState(() {});
                           },
                           child: Container(
@@ -298,7 +324,7 @@ class _SettingsDrawerContentState extends State<SettingsDrawerContent> {
                             ),
                             child: Center(
                               child: Text(
-                                '🔄 Reset VIP & Ad Timers',
+                                '🔄 Reset VIP Timers & Counters',
                                 style: TextStyle(
                                   fontSize: 12.sp,
                                   fontWeight: FontWeight.w700,

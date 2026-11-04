@@ -75,7 +75,7 @@ class _SplashScreenState extends State<SplashScreen>
           return FadeTransition(
             opacity: curved,
             child: ScaleTransition(
-              scale: Tween<double>(begin: 0.96, end: 1.0).animate(curved),
+              scale: Tween<double>(begin: 1.0, end: 1.12).animate(curved),
               child: child,
             ),
           );

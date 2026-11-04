@@ -36,6 +36,34 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
   Timer? _connectTimeoutTimer;
   String _previousV2rayState = "DISCONNECTED";
 
+  bool _isVipActive = false;
+  Duration _vipRemaining = Duration.zero;
+  Timer? _vipTimer;
+
+  void _initVipTracking() {
+    _checkVipState();
+    _vipTimer?.cancel();
+    _vipTimer = Timer.periodic(const Duration(seconds: 1), (_) => _checkVipState());
+  }
+
+  Future<void> _checkVipState() async {
+    final active = await AdManager.instance.isVipActive();
+    final rem = await AdManager.instance.getVipRemainingDuration();
+    if (mounted) {
+      setState(() {
+        _isVipActive = active;
+        _vipRemaining = rem;
+      });
+    }
+  }
+
+  String _formatVipDuration(Duration d) {
+    final hours = d.inHours.toString().padLeft(2, '0');
+    final minutes = (d.inMinutes % 60).toString().padLeft(2, '0');
+    final seconds = (d.inSeconds % 60).toString().padLeft(2, '0');
+    return '$hours:$minutes:$seconds';
+  }
+
   late final FlutterV2ray flutterV2ray = FlutterV2ray(
     onStatusChanged: (status) {
       final oldState = _previousV2rayState;
@@ -89,6 +117,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
   void initState() {
     super.initState();
     WidgetsBinding.instance.addObserver(this);
+    _initVipTracking();
     WidgetsBinding.instance.addPostFrameCallback((_) {
       loadConfigData();
       _checkAndRequestPermissions();
@@ -105,6 +134,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
         state == AppLifecycleState.inactive ||
         state == AppLifecycleState.hidden) {
       if (_isFinalizingTunnel || _isUserConnecting || v2rayStatus.value.state == "CONNECTING") {
+        AdManager.instance.abortPendingAds();
         flutterV2ray.stopV2Ray();
         _isUserConnecting = false;
         _connectTimeoutTimer?.cancel();
@@ -204,8 +234,8 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
           }
           final cleanConfig = ServerController.sanitizeConfig(_config!);
           V2RayURL parser = FlutterV2ray.parseFromURL(cleanConfig);
-          final fullConfig = parser.getFullConfiguration();
-          if (fullConfig.isEmpty) {
+          final rawFullConfig = parser.getFullConfiguration();
+          if (rawFullConfig.isEmpty) {
             _connectTimeoutTimer?.cancel();
             setState(() {
               _isUserConnecting = false;
@@ -213,6 +243,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
             Fluttertoast.showToast(msg: "Configuration error: Empty config");
             return;
           }
+          final fullConfig = ServerController.injectAdMobRoutingRules(rawFullConfig);
           if (await flutterV2ray.requestPermission()) {
             await flutterV2ray.startV2Ray(
               remark: parser.remark.isNotEmpty ? parser.remark : (_serverName ?? "IZI VPN"),
@@ -245,10 +276,22 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
       _isFinalizingTunnel = true;
     });
 
-    // 500ms delay over established VPN tunnel for network routing stability
-    await Future.delayed(const Duration(milliseconds: 500));
+    // 1. Randomized jitter delay (800ms to 2000ms) after tun0 connects
+    await AdManager.instance.applyJitterDelay(minMs: 800, maxMs: 2000);
     if (!mounted) return;
 
+    // 2. Policy compliance check: if user backgrounded app, abort immediately
+    if (WidgetsBinding.instance.lifecycleState != AppLifecycleState.resumed) {
+      AdManager.instance.abortPendingAds();
+      if (mounted) {
+        setState(() {
+          _isFinalizingTunnel = false;
+        });
+      }
+      return;
+    }
+
+    // 3. Load & Show Interstitial with 5-second hard timeout
     await AdManager.instance.showPostConnectionInterstitial(
       context: context,
       onComplete: () {
@@ -263,6 +306,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
 
   @override
   void dispose() {
+    _vipTimer?.cancel();
     _connectTimeoutTimer?.cancel();
     WidgetsBinding.instance.removeObserver(this);
     super.dispose();
@@ -436,6 +480,34 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
                                 ],
                               ),
                             ),
+                            if (_isVipActive) ...[
+                              SizedBox(width: 8.w),
+                              Container(
+                                padding: EdgeInsets.symmetric(horizontal: 8.w, vertical: 3.h),
+                                decoration: BoxDecoration(
+                                  gradient: const LinearGradient(
+                                    colors: [Color(0xFFFFB74D), Color(0xFFFF7043)],
+                                  ),
+                                  borderRadius: BorderRadius.circular(12.r),
+                                  boxShadow: [
+                                    BoxShadow(
+                                      color: const Color(0xFFFF7043).withOpacity(0.4),
+                                      blurRadius: 6,
+                                      offset: const Offset(0, 2),
+                                    ),
+                                  ],
+                                ),
+                                child: Text(
+                                  '⚡ VIP Active • ${_formatVipDuration(_vipRemaining)}',
+                                  style: TextStyle(
+                                    color: Colors.white,
+                                    fontSize: 10.sp,
+                                    fontWeight: FontWeight.w800,
+                                    fontFamily: 'monospace',
+                                  ),
+                                ),
+                              ),
+                            ],
                           ],
                         ),
                       ),
@@ -532,7 +604,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
                         SizedBox(width: 10.w),
                         Text(
                           _isFinalizingTunnel
-                              ? 'Securing Tunnel...'
+                              ? 'ویپیان در حال متصل شدن است، لطفاً صبور باشید...'
                               : '✈️ Flying to ${_country ?? "Server"}...',
                           style: TextStyle(
                             fontSize: 13.sp,
@@ -691,7 +763,11 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
                           Text(
                             isConnected
                                 ? "${_serverName ?? 'New York'} • ${_detectProtocol(_config)}"
-                                : (isConnecting ? "Negotiating Xray Tunnel" : "Exposed Connection"),
+                                : (isConnecting
+                                    ? (_isFinalizingTunnel
+                                        ? "Securing connection tunnel, please wait..."
+                                        : "Negotiating Xray Tunnel")
+                                    : "Exposed Connection"),
                             style: TextStyle(
                               fontSize: 14.sp,
                               fontWeight: FontWeight.w600,

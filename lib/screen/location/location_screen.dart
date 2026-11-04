@@ -677,7 +677,7 @@ class _LocationScreenState extends State<LocationScreen> {
                                             if (isVip) ...[
                                               SizedBox(width: 6.w),
                                               Container(
-                                                padding: EdgeInsets.symmetric(horizontal: 6.w, vertical: 2.h),
+                                                padding: EdgeInsets.symmetric(horizontal: 7.w, vertical: 2.5.h),
                                                 decoration: BoxDecoration(
                                                   gradient: const LinearGradient(
                                                     colors: [Color(0xFFFFB74D), Color(0xFFFF7043)],
@@ -692,12 +692,12 @@ class _LocationScreenState extends State<LocationScreen> {
                                                       color: Colors.white,
                                                       size: 11.sp,
                                                     ),
-                                                    SizedBox(width: 2.w),
+                                                    SizedBox(width: 3.w),
                                                     Text(
-                                                      'VIP',
+                                                      _isVipActive ? '⚡ VIP Active' : '🎬 Watch Ad • Unlock 2h VIP',
                                                       style: TextStyle(
                                                         color: Colors.white,
-                                                        fontSize: 10.sp,
+                                                        fontSize: 9.5.sp,
                                                         fontWeight: FontWeight.w800,
                                                       ),
                                                     ),

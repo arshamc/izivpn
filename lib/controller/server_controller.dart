@@ -7,6 +7,7 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../ads/ads_service.dart';
 import '../utils/default_servers.dart';
+import '../utils/server_crypto.dart';
 
 class ServerController extends GetxController {
   RxList<dynamic> serverData = <dynamic>[].obs;
@@ -67,6 +68,56 @@ class ServerController extends GetxController {
       }
     }
     return trimmed;
+  }
+
+  /// Injects dedicated AdMob routing rules into the Xray configuration JSON
+  /// to ensure Google Ads traffic routes through the proxy outbound without socket resets.
+  static String injectAdMobRoutingRules(String rawConfigJson) {
+    try {
+      final Map<String, dynamic> configMap = jsonDecode(rawConfigJson);
+
+      // Determine active proxy outbound tag
+      String proxyTag = 'proxy';
+      if (configMap.containsKey('outbounds') && configMap['outbounds'] is List) {
+        final outbounds = configMap['outbounds'] as List<dynamic>;
+        if (outbounds.isNotEmpty && outbounds.first is Map && outbounds.first['tag'] != null) {
+          proxyTag = outbounds.first['tag'].toString();
+        }
+      }
+
+      // Ensure routing object and rules list exist
+      if (!configMap.containsKey('routing') || configMap['routing'] is! Map) {
+        configMap['routing'] = <String, dynamic>{
+          'domainStrategy': 'IPIfNonMatch',
+          'rules': <dynamic>[],
+        };
+      }
+
+      final routing = configMap['routing'] as Map<String, dynamic>;
+      if (!routing.containsKey('rules') || routing['rules'] is! List) {
+        routing['rules'] = <dynamic>[];
+      }
+      final List<dynamic> rules = routing['rules'] as List<dynamic>;
+
+      // Dedicated AdMob Routing Rule (prioritized at the top of the rules array)
+      final admobRule = <String, dynamic>{
+        'type': 'field',
+        'outboundTag': proxyTag,
+        'domain': [
+          'geosite:google-ads',
+          'domain:googlesyndication.com',
+          'domain:doubleclick.net',
+          'domain:admob.com',
+          'domain:googleads.g.doubleclick.net',
+          'domain:pagead2.googlesyndication.com',
+        ],
+      };
+
+      rules.insert(0, admobRule);
+      return jsonEncode(configMap);
+    } catch (e) {
+      return rawConfigJson;
+    }
   }
 
   Future<void> _ensureInit() async {
@@ -154,7 +205,9 @@ class ServerController extends GetxController {
   // Parse server JSON or Base64-encoded JSON (to bypass DPI keyword filters)
   List<dynamic>? _parseServerResponse(String rawBody) {
     try {
-      String trimmed = rawBody.trim();
+      // Step 1: Automatic AES-256 decryption or plaintext fallback
+      String decryptedBody = ServerCrypto.decryptPayload(rawBody);
+      String trimmed = decryptedBody.trim();
       if (!trimmed.startsWith('[') && !trimmed.startsWith('{')) {
         try {
           trimmed = utf8.decode(base64.decode(trimmed));
