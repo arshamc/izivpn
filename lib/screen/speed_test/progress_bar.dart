@@ -10,7 +10,7 @@ class ProgressBar {
       percent: displayPer / 100.0,
       center: Text(
         "${displayPer.toStringAsFixed(1)}%",
-        style: TextStyle(
+        style: const TextStyle(
           fontSize: 14.0,
           color: txtCol,
         ),

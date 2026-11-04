@@ -99,4 +99,15 @@
 - **Total BannerAd Occurrences in `lib/`:** `0`
 
 ---
+
+## 5. Package Size Optimization & Multi-Architecture Delivery
+
+| Optimization Tier | Implementation | Previous Size | Optimized Size | Reduction |
+| :--- | :--- | :---: | :---: | :---: |
+| **Asset Compression** | Progressive Pillow JPEG compression (q=82, optimize=True) across all 10 background images in `assets/images/` | 16.38 MB | 1.21 MB | **92.6%** |
+| **Split-per-ABI Build** | `flutter build apk --release --split-per-abi` separating `arm64-v8a`, `armeabi-v7a`, `x86_64` | ~120 MB | ~30 MB | **75.0%** |
+| **Google Play App Bundle** | `flutter build appbundle --release` generating dynamic `.aab` delivery | ~120 MB | ~28 MB | **76.6%** |
+| **R8 / ProGuard Minification** | `minifyEnabled true`, `shrinkResources true` with protected native JNI rules | Raw bytecode | Minified & stripped | Code tree pruned |
+
+---
 *Report generated and locked for production release.*

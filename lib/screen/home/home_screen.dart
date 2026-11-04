@@ -13,6 +13,7 @@ import '../../utils/app_colors.dart';
 import '../../widget/circular_flag.dart';
 import '../../widget/coral_wave.dart';
 import '../../widget/flight_arc_painter.dart';
+import '../../widget/frosted_card.dart';
 import '../drawer/animated_drawer.dart';
 import '../location/location_screen.dart';
 import '../notification/notification_screen.dart';
@@ -289,10 +290,11 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
                     Expanded(
                       child: GestureDetector(
                         onTap: () async {
+                          final nav = Navigator.of(ctx);
                           final prefs = await SharedPreferences.getInstance();
                           await prefs.setBool('hasAcceptedVpnDisclosure', true);
-                          if (mounted && Navigator.canPop(ctx)) {
-                            Navigator.of(ctx).pop();
+                          if (mounted && nav.canPop()) {
+                            nav.pop();
                           }
                           await _startVpnConnection();
                         },

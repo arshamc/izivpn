@@ -25,7 +25,8 @@ class AdConfig {
   // Remote Dynamic Anti-Ban & Timeouts Policies
   static bool adsEnabled = true;
   static int tunnelTimeoutSec = 10; // Exactly 10-second tunnel connection timeout
-  static int adLoadTimeoutSec = 20; // 20-second hard timeout for ad loading
+  static int adLoadTimeoutSec = 20; // 20-second hard timeout for interstitial ad loading
+  static int rewardedTimeoutSec = 8; // 8-second hard timeout for rewarded video loading
   static int maxInterstitials24h = 2; // Strict frequency cap: max 2 per 24h
   static int cooldownMinutes = 180; // 3 hours cooldown
   static int vipDurationHours = 2; // 2-hour VIP unlock
@@ -52,6 +53,12 @@ class AdConfig {
       adLoadTimeoutSec = (data['ad_load_timeout_sec'] as num).toInt();
     } else if (data.containsKey('interstitialTimeoutSec')) {
       adLoadTimeoutSec = (data['interstitialTimeoutSec'] as num).toInt();
+    }
+
+    if (data.containsKey('rewarded_load_timeout_sec')) {
+      rewardedTimeoutSec = (data['rewarded_load_timeout_sec'] as num).toInt();
+    } else if (data.containsKey('rewardedTimeoutSec')) {
+      rewardedTimeoutSec = (data['rewardedTimeoutSec'] as num).toInt();
     }
 
     if (data.containsKey('max_daily_interstitials')) {
